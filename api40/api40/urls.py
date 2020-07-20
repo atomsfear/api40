@@ -23,4 +23,7 @@ urlpatterns = [
     path('api/auth/', dv.auth),
     path('verification/send/', dv.send),
     path('verification/check/', dv.check),
+    path('password/forgot/', dv.forgot),
+    path('password/reset/', dv.reset),
+    path('api/user/', dv.personal_info),
 ]

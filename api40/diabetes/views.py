@@ -1,9 +1,11 @@
 from django.http import JsonResponse
 from diabetes.models import Patient, EmailAuth
-from diabetes.forms import RegisterForm
+from diabetes.forms import RegisterForm, PersonalInfoForm
 from django.contrib import auth as Auth
 from django.contrib.sessions.models import Session
 from django.core.mail import send_mail
+from django.utils import timezone
+from django.http.multipartparser import MultiPartParser
 import random
 import string
 import time
@@ -119,25 +121,111 @@ def check(request):
             phone = request.POST.get('phone', '')
             email = request.POST.get('email', '')
             if code and phone:
+                verify = EmailAuth.objects.get(code=code)
+                user = verify.username
+                if not user.is_active:
+                    if time.time() > verify.end_time:
+                        verify.delete()
+                        raise Exception
+                    if user.phone != phone:
+                        raise Exception
+                    if email:
+                        if user.email != email:
+                            raise Exception
+                    user.is_active = True
+                    user.save()
+                    verify.delete()
+                    result = '0'
+    except:
+        pass
+    return JsonResponse({'status': result})
+
+
+def forgot(request):
+    result = '1'
+    if request.method == 'POST':
+        email = request.POST.get('email', '')
+        phone = request.POST.get('phone', '')
+        if phone:
+            if email:
                 try:
-                    verify = EmailAuth.objects.get(code=code)
-                    user = verify.username
+                    user = Patient.objects.get(email=email)
                 except Patient.DoesNotExist:
                     user = None
-                if user is not None:
-                    if not user.is_active:
-                        if time.time() > verify.end_time:
-                            verify.delete()
-                            raise Exception
-                        if user.phone != phone:
-                            raise Exception
-                        if email:
-                            if user.email != email:
-                                raise Exception
-                        user.is_active = True
-                        user.save()
-                        verify.delete()
-                        result = '0'
+                if user is None:
+                    user = Patient.objects.get(phone=phone)
+            else:
+                user = Patient.objects.get(phone=phone)
+            if not user.is_active:
+                raise Exception
+            new_password = ''.join([random.choice(
+                string.ascii_letters + string.digits) for i in range(12)])
+            title = "meter123.com 新密碼"
+            msg = '請使用新密碼登入！！\n新密碼：' + new_password
+            email_from = 'secretclubonly007@gmail.com'
+            reciever = [user.email]
+            send_mail(title, msg, email_from,
+                      reciever, fail_silently=False)
+            user.set_password(new_password)
+            user.save()
+            unexpired_sessions = Session.objects.filter(
+                expire_date__gte=timezone.now())
+            [
+                session.delete() for session in unexpired_sessions
+                if str(user.pk) == session.get_decoded().get('_auth_user_id')
+            ]
+            result = '0'
+    return JsonResponse({'status': result})
+
+
+def reset(request):
+    result = '1'
+    try:
+        if request.method == 'POST':
+            token = request.POST.get('token', '')
+            password = request.POST.get('password', '')
+            if token and password:
+                s = Session.objects.get(pk=token).get_decoded()
+                user = Patient.objects.get(id=s['_auth_user_id'])
+                user.set_password(password)
+                user.save()
+                unexpired_sessions = Session.objects.filter(
+                    expire_date__gte=timezone.now())
+                [
+                    session.delete() for session in unexpired_sessions
+                    if str(user.pk) == session.get_decoded().get('_auth_user_id')
+                ]
+                result = '0'
+    except:
+        pass
+    return JsonResponse({'status': result})
+
+
+def personal_info(request):
+    result = '1'
+    try:
+        s = Session.objects.get(pk=request.headers.get(
+            'Authorization', '')).get_decoded()
+        user = Patient.objects.get(id=s['_auth_user_id'])
+        if request.method == 'PATCH':
+            patch = MultiPartParser(request.META, request,
+                                    request.upload_handlers).parse()[0].dict()
+            f = PersonalInfoForm(patch)
+            if f.is_valid():
+                data = f.cleaned_data
+                filtered = {i: data[i] for i in data if data[i]}
+                for i in filtered:
+                    setattr(user, i, data[i])
+                if 'email' in filtered:
+                    unexpired_sessions = Session.objects.filter(
+                        expire_date__gte=timezone.now())
+                    [
+                        session.delete() for session in unexpired_sessions
+                        if str(user.pk) == session.get_decoded().get('_auth_user_id')
+                    ]
+                    user.is_active = False
+                user.save()
+                result = '0'
     except:
         pass
     return JsonResponse({'status': result})
