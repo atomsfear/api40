@@ -13,6 +13,7 @@ import time
 
 
 def register(request):
+    # 1.註冊
     result = '1'
     try:
         if request.method == 'POST':
@@ -33,6 +34,7 @@ def register(request):
 
 
 def auth(request):
+    # 2.登入
     result = '1'
     try:
         if request.method == 'POST':
@@ -71,6 +73,7 @@ def auth(request):
 
 
 def send(request):
+    # 3.發送驗證碼
     result = '1'
     try:
         if request.method == 'POST':
@@ -113,7 +116,8 @@ def send(request):
     return JsonResponse({'status': result})
 
 
-def check(request):
+def vcheck(request):
+    # 4.檢查驗證碼
     result = '1'
     try:
         if request.method == 'POST':
@@ -142,6 +146,7 @@ def check(request):
 
 
 def forgot(request):
+    # 5.忘記密碼
     result = '1'
     if request.method == 'POST':
         email = request.POST.get('email', '')
@@ -179,6 +184,7 @@ def forgot(request):
 
 
 def reset(request):
+    # 6.重設密碼
     result = '1'
     try:
         if request.method == 'POST':
@@ -201,7 +207,31 @@ def reset(request):
     return JsonResponse({'status': result})
 
 
+def privacy_policy(request):
+    # 13.隱私權聲明 FBLogin
+    result = '1'
+    try:
+        if request.method == 'POST':
+            result = '0'
+    except:
+        pass
+    return JsonResponse({'status': result})
+
+
+def rcheck(request):
+    # 38.註冊確認
+    result = '1'
+    try:
+        if request.method == 'GET':
+            Patient.objects.get(username=request.GET['account'])
+            result = '0'
+    except:
+        pass
+    return JsonResponse({'status': result})
+
+
 def personal_info(request):
+    # 7.個人資訊設定
     result = '1'
     try:
         s = Session.objects.get(pk=request.headers.get(
