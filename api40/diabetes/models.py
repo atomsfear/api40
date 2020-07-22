@@ -105,20 +105,13 @@ class Setting(models.Model):
         max_digits=15, decimal_places=0, primary_key=True)
     user_id = models.DecimalField(
         max_digits=15, decimal_places=0, blank=True, null=True)
-    after_recording = models.DecimalField(
-        max_digits=5, decimal_places=0, blank=True, null=True, default=0)
-    no_recording_for_a_day = models.DecimalField(
-        max_digits=5, decimal_places=0, blank=True, null=True, default=0)
-    over_max_or_under_min = models.DecimalField(
-        max_digits=5, decimal_places=0, blank=True, null=True, default=0)
-    after_meal = models.DecimalField(
-        max_digits=5, decimal_places=0, blank=True, null=True, default=0)
-    unit_of_sugar = models.DecimalField(
-        max_digits=5, decimal_places=0, blank=True, null=True, default=0)
-    unit_of_weight = models.DecimalField(
-        max_digits=5, decimal_places=0, blank=True, null=True, default=0)
-    unit_of_height = models.DecimalField(
-        max_digits=5, decimal_places=0, blank=True, null=True, default=0)
+    after_recording = models.CharField(max_length=1, default='0')
+    no_recording_for_a_day = models.CharField(max_length=1, default='0')
+    over_max_or_under_min = models.CharField(max_length=1, default='0')
+    after_meal = models.CharField(max_length=1, default='0')
+    unit_of_sugar = models.CharField(max_length=1, default='0')
+    unit_of_weight = models.CharField(max_length=1, default='0')
+    unit_of_height = models.CharField(max_length=1, default='0')
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
     patient = models.OneToOneField(Patient, on_delete=models.CASCADE)

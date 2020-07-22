@@ -1,6 +1,6 @@
 from django.http import JsonResponse
 from diabetes.models import Patient, EmailAuth, Default, Setting
-from diabetes.forms import RegisterForm, PersonalInfoForm, PersonalDefaultForm
+from diabetes.forms import RegisterForm, PersonalInfoForm, PersonalDefaultForm, SettingForm
 from django.contrib import auth as Auth
 from django.contrib.sessions.models import Session
 from django.core.mail import send_mail
@@ -393,6 +393,30 @@ def default(request):
                     for i in filtered:
                         setattr(user.default, i, data[i])
                     user.default.save()
+                result = '0'
+    except:
+        pass
+    return JsonResponse({'status': result})
+
+
+def setting(request):
+    # 35.個人設定
+    result = '1'
+    try:
+        s = Session.objects.get(pk=request.headers.get(
+            'Authorization', '')).get_decoded()
+        user = Patient.objects.get(id=s['_auth_user_id'])
+        if request.method == 'PATCH':
+            patch = MultiPartParser(request.META, request,
+                                    request.upload_handlers).parse()[0].dict()
+            f = SettingForm(patch)
+            if f.is_valid():
+                data = f.cleaned_data
+                filtered = {i: data[i] for i in data if data[i]}
+                if filtered:
+                    for i in filtered:
+                        setattr(user.setting, i, data[i])
+                    user.setting.save()
                 result = '0'
     except:
         pass

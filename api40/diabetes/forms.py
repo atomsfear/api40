@@ -144,3 +144,45 @@ class PersonalDefaultForm(forms.Form):
         max_digits=5, decimal_places=0, required=False)
     body_fat_min = forms.DecimalField(
         max_digits=5, decimal_places=0, required=False)
+
+
+class SettingForm(forms.Form):
+    after_recording = forms.CharField(max_length=1, required=False)
+    no_recording_for_a_day = forms.CharField(max_length=1, required=False)
+    over_max_or_under_min = forms.CharField(max_length=1, required=False)
+    after_meal = forms.CharField(max_length=1, required=False)
+    unit_of_sugar = forms.CharField(max_length=1, required=False)
+    unit_of_weight = forms.CharField(max_length=1, required=False)
+    unit_of_height = forms.CharField(max_length=1, required=False)
+
+    def clean(self):
+        after_recording = self.cleaned_data['after_recording']
+        no_recording_for_a_day = self.cleaned_data['no_recording_for_a_day']
+        over_max_or_under_min = self.cleaned_data['over_max_or_under_min']
+        after_meal = self.cleaned_data['after_meal']
+        unit_of_sugar = self.cleaned_data['unit_of_sugar']
+        unit_of_weight = self.cleaned_data['unit_of_weight']
+        unit_of_height = self.cleaned_data['unit_of_height']
+
+        if after_recording != "":
+            if after_recording not in ['0', '1']:
+                raise forms.ValidationError("1")
+        if no_recording_for_a_day != "":
+            if no_recording_for_a_day not in ['0', '1']:
+                raise forms.ValidationError("2")
+        if over_max_or_under_min != "":
+            if over_max_or_under_min not in ['0', '1']:
+                raise forms.ValidationError("3")
+        if after_meal != "":
+            if after_meal not in ['0', '1']:
+                raise forms.ValidationError("4")
+        if unit_of_sugar != "":
+            if unit_of_sugar not in ['0', '1']:
+                raise forms.ValidationError("5")
+        if unit_of_weight != "":
+            if unit_of_weight not in ['0', '1']:
+                raise forms.ValidationError("6")
+        if unit_of_height != "":
+            if unit_of_height not in ['0', '1']:
+                raise forms.ValidationError("7")
+        return self.cleaned_data

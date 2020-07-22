@@ -37,10 +37,10 @@ deactivate () {
 # unset irrelavent variables
 deactivate nondestructive
 
-VIRTUAL_ENV="/home/user/test/venv"
+VIRTUAL_ENV="/home/user/api40/venv"
 export VIRTUAL_ENV
 
-_OLD_VIRTUAL_PATH="$PATH"
+VIRTUAL_ENV="$(cd "$(dirname "$(dirname "${BASH_SOURCE[0]}" )")" && pwd)"
 PATH="$VIRTUAL_ENV/bin:$PATH"
 export PATH
 
