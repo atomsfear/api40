@@ -1,6 +1,6 @@
 from django.http import JsonResponse
-from diabetes.models import Patient, EmailAuth
-from diabetes.forms import RegisterForm, PersonalInfoForm
+from diabetes.models import Patient, EmailAuth, Default, Setting
+from diabetes.forms import RegisterForm, PersonalInfoForm, PersonalDefaultForm
 from django.contrib import auth as Auth
 from django.contrib.sessions.models import Session
 from django.core.mail import send_mail
@@ -9,13 +9,15 @@ from django.http.multipartparser import MultiPartParser
 import random
 import string
 import time
+from collections import OrderedDict
 # Create your views here.
 
 
 def register(request):
     # 1.註冊
     result = '1'
-    try:
+    # try:
+    if True:
         if request.method == 'POST':
             f = RegisterForm(request.POST)
             if f.is_valid():
@@ -28,8 +30,8 @@ def register(request):
                 user.set_password(password)
                 user.save()
                 result = '0'
-    except:
-        pass
+    # except:
+    #    pass
     return JsonResponse({'status': result})
 
 
@@ -62,6 +64,8 @@ def auth(request):
             if user.is_active:
                 request.session.create()
                 Auth.login(request, user)
+                user.login_times += 1
+                user.save()
             else:
                 result = '2'
     except:
@@ -79,7 +83,7 @@ def send(request):
         if request.method == 'POST':
             email = request.POST.get('email', '')
             phone = request.POST.get('phone', '')
-            if phone:
+            if phone or email:
                 if email:
                     try:
                         user = Patient.objects.get(email=email)
@@ -87,13 +91,11 @@ def send(request):
                         user = None
                     if user is None:
                         user = Patient.objects.get(phone=phone)
-                    if (user.email == '' or user.email != email) and (not user.is_active):
-                        user.email = email
-                        user.save()
-                        user = Patient.objects.get(email=email)
+                        if user.email in ['', None]:
+                            raise Exception
                 else:
                     user = Patient.objects.get(phone=phone)
-                    if user.email == '':
+                    if user.email in ['', None]:
                         raise Exception
                 if not user.is_active:
                     duration = 3600
@@ -137,7 +139,12 @@ def vcheck(request):
                         if user.email != email:
                             raise Exception
                     user.is_active = True
+                    user.verified = '1'
                     user.save()
+                    Default.objects.create(
+                        id=user.pk, user_id=user.pk, patient=user)
+                    Setting.objects.create(
+                        id=user.pk, user_id=user.pk, patient=user)
                     verify.delete()
                     result = '0'
     except:
@@ -151,7 +158,7 @@ def forgot(request):
     if request.method == 'POST':
         email = request.POST.get('email', '')
         phone = request.POST.get('phone', '')
-        if phone:
+        if phone or email:
             if email:
                 try:
                     user = Patient.objects.get(email=email)
@@ -159,8 +166,12 @@ def forgot(request):
                     user = None
                 if user is None:
                     user = Patient.objects.get(phone=phone)
+                    if user.email in ['', None]:
+                        raise Exception
             else:
                 user = Patient.objects.get(phone=phone)
+                if user.email in ['', None]:
+                    raise Exception
             if not user.is_active:
                 raise Exception
             new_password = ''.join([random.choice(
@@ -231,7 +242,142 @@ def rcheck(request):
 
 
 def personal_info(request):
-    # 7.個人資訊設定
+    # 7.個人資訊設定，12.個人資訊
+    result = {'status': '1'}
+    try:
+        s = Session.objects.get(pk=request.headers.get(
+            'Authorization', '')).get_decoded()
+        user = Patient.objects.get(id=s['_auth_user_id'])
+        # 7.個人資訊設定
+        if request.method == 'PATCH':
+            patch = MultiPartParser(request.META, request,
+                                    request.upload_handlers).parse()[0].dict()
+            f = PersonalInfoForm(patch)
+            if f.is_valid():
+                data = f.cleaned_data
+                filtered = {i: data[i] for i in data if data[i]}
+                if filtered:
+                    for i in filtered:
+                        setattr(user, i, data[i])
+                    if 'email' in filtered:
+                        unexpired_sessions = Session.objects.filter(
+                            expire_date__gte=timezone.now())
+                        [
+                            session.delete() for session in unexpired_sessions
+                            if str(user.pk) == session.get_decoded().get('_auth_user_id')
+                        ]
+                        user.is_active = False
+                    user.save()
+                result = {'status': '0'}
+        # 12.個人資訊
+        if request.method == 'GET':
+            result = OrderedDict([('status', '0')])
+            result['user'] = OrderedDict([
+                ("id", user.pk),
+                ("name", user.name),
+                ("account", user.username),
+                ("email", user.email),
+                ("phone", user.phone),
+                ("fb_id", user.fb_id),
+                ("status", user.status),
+                ("group", user.group),
+                ("birthday", user.birthday),
+                ("height", None if user.height is None else float(user.height)),
+                ("weight", None if user.weight is None else float(user.weight)),
+                ("gender", None if user.gender is None else int(user.gender)),
+                ("address", user.address),
+                ("unread_records", [
+                    int(user.unread_records_one),
+                    user.unread_records_two,
+                    int(user.unread_records_three)
+                ]),
+                ("verified", int(user.verified)),
+                ("private_policy", int(user.privacy_policy)),
+                ("must_change_password", int(user.must_change_password)),
+                ("fcm_id", user.fcm_id),
+                ("badge", int(user.badge)),
+                ("login_times", int(user.login_times)),
+                ("created_at", str(user.created_at.replace(
+                    tzinfo=timezone.utc).astimezone(tz=None))[:19]),
+                ("updated_at", str(user.updated_at.replace(
+                    tzinfo=timezone.utc).astimezone(tz=None))[:19]),
+                ("default", OrderedDict([
+                    ("id", int(user.default.id)),
+                    ("user_id", int(user.default.user_id)),
+                    ("sugar_delta_max", None if user.default.sugar_delta_max is None else int(
+                        user.default.sugar_delta_max)),
+                    ("sugar_delta_min", None if user.default.sugar_delta_min is None else int(
+                        user.default.sugar_delta_min)),
+                    ("sugar_morning_max", None if user.default.sugar_morning_max is None else int(
+                        user.default.sugar_morning_max)),
+                    ("sugar_morning_min", None if user.default.sugar_morning_min is None else int(
+                        user.default.sugar_morning_min)),
+                    ("sugar_evening_max", None if user.default.sugar_evening_max is None else int(
+                        user.default.sugar_evening_max)),
+                    ("sugar_evening_min", None if user.default.sugar_evening_min is None else int(
+                        user.default.sugar_evening_min)),
+                    ("sugar_before_max", None if user.default.sugar_before_max is None else int(
+                        user.default.sugar_before_max)),
+                    ("sugar_before_min", None if user.default.sugar_before_min is None else int(
+                        user.default.sugar_before_min)),
+                    ("sugar_after_max", None if user.default.sugar_after_max is None else int(
+                        user.default.sugar_after_max)),
+                    ("sugar_after_min", None if user.default.sugar_after_min is None else int(
+                        user.default.sugar_after_min)),
+                    ("systolic_max", None if user.default.systolic_max is None else int(
+                        user.default.systolic_max)),
+                    ("systolic_min", None if user.default.systolic_min is None else int(
+                        user.default.systolic_min)),
+                    ("diastolic_max", None if user.default.diastolic_max is None else int(
+                        user.default.diastolic_max)),
+                    ("diastolic_min", None if user.default.diastolic_min is None else int(
+                        user.default.diastolic_min)),
+                    ("pulse_max", None if user.default.pulse_max is None else int(
+                        user.default.pulse_max)),
+                    ("pulse_min", None if user.default.pulse_min is None else int(
+                        user.default.pulse_min)),
+                    ("weight_max", None if user.default.weight_max is None else int(
+                        user.default.weight_max)),
+                    ("weight_min", None if user.default.weight_min is None else int(
+                        user.default.weight_min)),
+                    ("bmi_max", None if user.default.bmi_max is None else int(
+                        user.default.bmi_max)),
+                    ("bmi_min", None if user.default.bmi_min is None else int(
+                        user.default.bmi_min)),
+                    ("body_fat_max", None if user.default.body_fat_max is None else int(
+                        user.default.body_fat_max)),
+                    ("body_fat_min", None if user.default.body_fat_min is None else int(
+                        user.default.body_fat_min)),
+                    ("created_at", str(user.default.created_at.replace(
+                        tzinfo=timezone.utc).astimezone(tz=None))[:19]),
+                    ("updated_at", str(user.default.updated_at.replace(
+                        tzinfo=timezone.utc).astimezone(tz=None))[:19])
+                ])),
+                ("setting", OrderedDict([
+                    ("id", int(user.setting.id)),
+                    ("user_id", int(user.setting.user_id)),
+                    ("after_recording", int(user.setting.after_recording)),
+                    ("no_recording_for_a_day", int(
+                        user.setting.no_recording_for_a_day)),
+                    ("over_max_or_under_min", int(
+                        user.setting.over_max_or_under_min)),
+                    ("after_meal", int(user.setting.after_meal)),
+                    ("unit_of_sugar", int(user.setting.unit_of_sugar)),
+                    ("unit_of_weight", int(user.setting.unit_of_weight)),
+                    ("unit_of_height", int(user.setting.unit_of_height)),
+                    ("created_at", str(user.setting.created_at.replace(
+                        tzinfo=timezone.utc).astimezone(tz=None))[:19]),
+                    ("updated_at", str(user.setting.updated_at.replace(
+                        tzinfo=timezone.utc).astimezone(tz=None))[:19]),
+                ]))
+            ])
+    except:
+        pass
+    return JsonResponse(result)
+
+
+def default(request):
+    # 11.個人預設值
     result = '1'
     try:
         s = Session.objects.get(pk=request.headers.get(
@@ -240,21 +386,14 @@ def personal_info(request):
         if request.method == 'PATCH':
             patch = MultiPartParser(request.META, request,
                                     request.upload_handlers).parse()[0].dict()
-            f = PersonalInfoForm(patch)
+            f = PersonalDefaultForm(patch)
             if f.is_valid():
                 data = f.cleaned_data
                 filtered = {i: data[i] for i in data if data[i]}
-                for i in filtered:
-                    setattr(user, i, data[i])
-                if 'email' in filtered:
-                    unexpired_sessions = Session.objects.filter(
-                        expire_date__gte=timezone.now())
-                    [
-                        session.delete() for session in unexpired_sessions
-                        if str(user.pk) == session.get_decoded().get('_auth_user_id')
-                    ]
-                    user.is_active = False
-                user.save()
+                if filtered:
+                    for i in filtered:
+                        setattr(user.default, i, data[i])
+                    user.default.save()
                 result = '0'
     except:
         pass

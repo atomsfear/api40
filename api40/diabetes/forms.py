@@ -7,7 +7,8 @@ import datetime
 class RegisterForm(forms.Form):
     account = forms.CharField(max_length=50)
     phone_regex = RegexValidator(regex=r'^\+?1?\d{9,15}$')
-    phone = forms.CharField(validators=[phone_regex], max_length=17)
+    phone = forms.CharField(
+        validators=[phone_regex], max_length=17, required=False)
     email = forms.EmailField(max_length=50, required=False)
     password = forms.CharField(max_length=50)
 
@@ -22,12 +23,13 @@ class RegisterForm(forms.Form):
                 raise forms.ValidationError("2")
             if Patient.objects.filter(phone=email).exists():
                 raise forms.ValidationError("3")
-        if Patient.objects.filter(phone=phone).exists():
-            raise forms.ValidationError("4")
-        if Patient.objects.filter(username=phone).exists():
-            raise forms.ValidationError("5")
-        if Patient.objects.filter(email=phone).exists():
-            raise forms.ValidationError("6")
+        if phone != "":
+            if Patient.objects.filter(phone=phone).exists():
+                raise forms.ValidationError("4")
+            if Patient.objects.filter(username=phone).exists():
+                raise forms.ValidationError("5")
+            if Patient.objects.filter(email=phone).exists():
+                raise forms.ValidationError("6")
         if Patient.objects.filter(username=account).exists():
             raise forms.ValidationError("7")
         if Patient.objects.filter(email=account).exists():
@@ -95,3 +97,50 @@ class PersonalInfoForm(forms.Form):
             if days < 0:
                 raise forms.ValidationError("B")
         return self.cleaned_data
+
+
+class PersonalDefaultForm(forms.Form):
+    sugar_delta_max = forms.DecimalField(
+        max_digits=5, decimal_places=0, required=False)
+    sugar_delta_min = forms.DecimalField(
+        max_digits=5, decimal_places=0, required=False)
+    sugar_morning_max = forms.DecimalField(
+        max_digits=5, decimal_places=0, required=False)
+    sugar_morning_min = forms.DecimalField(
+        max_digits=5, decimal_places=0, required=False)
+    sugar_evening_max = forms.DecimalField(
+        max_digits=5, decimal_places=0, required=False)
+    sugar_evening_min = forms.DecimalField(
+        max_digits=5, decimal_places=0, required=False)
+    sugar_before_max = forms.DecimalField(
+        max_digits=5, decimal_places=0, required=False)
+    sugar_before_min = forms.DecimalField(
+        max_digits=5, decimal_places=0, required=False)
+    sugar_after_max = forms.DecimalField(
+        max_digits=5, decimal_places=0, required=False)
+    sugar_after_min = forms.DecimalField(
+        max_digits=5, decimal_places=0, required=False)
+    systolic_max = forms.DecimalField(
+        max_digits=5, decimal_places=0, required=False)
+    systolic_min = forms.DecimalField(
+        max_digits=5, decimal_places=0, required=False)
+    diastolic_max = forms.DecimalField(
+        max_digits=5, decimal_places=0, required=False)
+    diastolic_min = forms.DecimalField(
+        max_digits=5, decimal_places=0, required=False)
+    pulse_max = forms.DecimalField(
+        max_digits=5, decimal_places=0, required=False)
+    pulse_min = forms.DecimalField(
+        max_digits=5, decimal_places=0, required=False)
+    weight_max = forms.DecimalField(
+        max_digits=5, decimal_places=0, required=False)
+    weight_min = forms.DecimalField(
+        max_digits=5, decimal_places=0, required=False)
+    bmi_max = forms.DecimalField(
+        max_digits=5, decimal_places=0, required=False)
+    bmi_min = forms.DecimalField(
+        max_digits=5, decimal_places=0, required=False)
+    body_fat_max = forms.DecimalField(
+        max_digits=5, decimal_places=0, required=False)
+    body_fat_min = forms.DecimalField(
+        max_digits=5, decimal_places=0, required=False)
