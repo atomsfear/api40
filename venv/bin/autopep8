@@ -1,4 +1,4 @@
-#!/home/user/api40/venv/bin/python3
+#!/home/user/test/venv/bin/python3
 # EASY-INSTALL-ENTRY-SCRIPT: 'autopep8==1.5.3','console_scripts','autopep8'
 __requires__ = 'autopep8==1.5.3'
 import sys

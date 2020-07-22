@@ -15,39 +15,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-import diabetes.views as dv
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-
-    ###########登入###########
-    path('api/register/', dv.register),  # 1.註冊
-    path('api/auth/', dv.auth),  # 2.登入
-    path('api/verification/send/', dv.send),  # 3.發送驗證碼
-    path('api/verification/check/', dv.vcheck),  # 3.檢查驗證碼
-    path('api/password/forgot/', dv.forgot),  # 4.忘記密碼
-    path('api/password/reset/', dv.reset),  # 5.重設密碼
-    path('api/user/privacy-policy/', dv.privacy_policy),  # 13.隱私權聲明 FBLogin
-    path('api/register/check/', dv.rcheck),  # 38.註冊確認
-
-    ##########個人資訊##########
-    path('api/user/', dv.personal_info),  # 7.個人資訊設定，12.個人資訊
-    path('api/user/default/', dv.default),  # 11.個人預設值
-
-
-    # 以下網址結尾無斜線。
-
-    ###########登入###########
-    path('api/register', dv.register),  # 1.註冊
-    path('api/auth', dv.auth),  # 2.登入
-    path('api/verification/send', dv.send),  # 3.發送驗證碼
-    path('api/verification/check', dv.vcheck),  # 3.檢查驗證碼
-    path('api/password/forgot', dv.forgot),  # 4.忘記密碼
-    path('api/password/reset', dv.reset),  # 5.重設密碼
-    path('api/user/privacy-policy', dv.privacy_policy),  # 13.隱私權聲明 FBLogin
-    path('api/register/check', dv.rcheck),  # 38.註冊確認
-
-    ##########個人資訊##########
-    path('api/user', dv.personal_info),  # 7.個人資訊設定，12.個人資訊
-    path('api/user/default', dv.default),  # 11.個人預設值
 ]
