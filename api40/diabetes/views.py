@@ -16,8 +16,7 @@ from collections import OrderedDict
 def register(request):
     # 1.註冊
     result = '1'
-    # try:
-    if True:
+    try:
         if request.method == 'POST':
             f = RegisterForm(request.POST)
             if f.is_valid():
@@ -30,8 +29,8 @@ def register(request):
                 user.set_password(password)
                 user.save()
                 result = '0'
-    # except:
-    #    pass
+    except:
+        pass
     return JsonResponse({'status': result})
 
 
