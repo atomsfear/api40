@@ -141,6 +141,20 @@ class Medical(models.Model):
         return self.patient.username
 
 
+class A1cs(models.Model):
+    user_id = models.DecimalField(
+        max_digits=15, decimal_places=0, blank=True, null=True)
+    a1c = models.DecimalField(
+        max_digits=6, decimal_places=0, blank=True, null=True)
+    recorded_at = models.DateTimeField(default=timezone.now)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return self.patient.username
+
+
 class Drug(models.Model):
     user_id = models.DecimalField(
         max_digits=15, decimal_places=0, blank=True, null=True)

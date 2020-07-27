@@ -1,11 +1,10 @@
 from django.http import JsonResponse
-from diabetes.models import Patient, EmailAuth, Default, Setting, Medical, Drug
-from diabetes.forms import RegisterForm, PersonalInfoForm, PersonalDefaultForm, SettingForm, MedicalForm, DrugForm
+from diabetes.models import Patient, EmailAuth, Default, Setting, Medical, Drug, A1cs
+from diabetes.forms import RegisterForm, PersonalInfoForm, PersonalDefaultForm, SettingForm, MedicalForm, DrugForm, A1csForm
 from django.contrib import auth as Auth
 from django.contrib.sessions.models import Session
 from django.core.mail import send_mail
 from django.utils import timezone
-from django.http.multipartparser import MultiPartParser
 import random
 import string
 import time
@@ -19,7 +18,7 @@ def register(request):
     result = '1'
     try:
         if request.method == 'POST':
-            f = RegisterForm(request.POST)
+            f = RegisterForm(json.loads(request.body.decode("utf-8")))
             if f.is_valid():
                 account = f.cleaned_data['account']
                 phone = f.cleaned_data['phone']
@@ -46,34 +45,37 @@ def auth(request):
     result = '1'
     try:
         if request.method == 'POST':
-            account = request.POST.get('account', '')
-            password = request.POST.get('password', '')
+            data = json.loads(request.body.decode("utf-8"))
+            account = data['account'] if 'account' in data else ''
+            password = data['password'] if 'password' in data else ''
+            verified = False
             if account and password:
                 user = Auth.authenticate(username=account, password=password)
                 if user is not None:
-                    result = '0'
+                    verified = True
                 else:
                     email = Patient.objects.filter(email=account)
                     if email:
                         user = Auth.authenticate(
                             username=email[0].username, password=password)
                         if user is not None:
-                            result = '0'
+                            verified = True
                     else:
                         phone = Patient.objects.filter(phone=account)
                         if phone:
                             user = Auth.authenticate(
                                 username=phone[0].username, password=password)
                             if user is not None:
-                                result = '0'
-        if result == '0':
-            if user.is_active:
-                request.session.create()
-                Auth.login(request, user)
-                user.login_times += 1
-                user.save()
-            else:
-                result = '2'
+                                verified = True
+            if verified:
+                if user.is_active:
+                    request.session.create()
+                    Auth.login(request, user)
+                    user.login_times += 1
+                    user.save()
+                    result = '0'
+                else:
+                    result = '2'
     except:
         pass
     if result == '0':
@@ -87,8 +89,9 @@ def send(request):
     result = '1'
     try:
         if request.method == 'POST':
-            email = request.POST.get('email', '')
-            phone = request.POST.get('phone', '')
+            data = json.loads(request.body.decode("utf-8"))
+            phone = data['phone'] if 'phone' in data else ''
+            email = data['email'] if 'email' in data else ''
             if phone or email:
                 if email:
                     try:
@@ -112,7 +115,7 @@ def send(request):
                         time.time()+duration), patient=user)
                     title = "meter123.com 信箱驗證碼"
                     msg = 'code：' + code + '\nExpire：' + \
-                        time.strftime('%Y/%m/%d %H:%M:%S %z',
+                        time.strftime('%Y-%m-%d %H:%M:%S %z',
                                       time.localtime(time.time()+duration))
                     email_from = 'secretclubonly007@gmail.com'
                     reciever = [user.email]
@@ -129,9 +132,10 @@ def vcheck(request):
     result = '1'
     try:
         if request.method == 'POST':
-            code = request.POST.get('code', '')
-            phone = request.POST.get('phone', '')
-            email = request.POST.get('email', '')
+            data = json.loads(request.body.decode("utf-8"))
+            code = data['code'] if 'code' in data else ''
+            phone = data['phone'] if 'phone' in data else ''
+            email = data['email'] if 'email' in data else ''
             if code and phone:
                 verify = EmailAuth.objects.get(code=code)
                 user = verify.patient
@@ -159,8 +163,9 @@ def forgot(request):
     result = '1'
     try:
         if request.method == 'POST':
-            email = request.POST.get('email', '')
-            phone = request.POST.get('phone', '')
+            data = json.loads(request.body.decode("utf-8"))
+            email = data['email'] if 'email' in data else ''
+            phone = data['phone'] if 'phone' in data else ''
             if phone or email:
                 if email:
                     try:
@@ -204,20 +209,20 @@ def reset(request):
     result = '1'
     try:
         if request.method == 'POST':
-            token = request.POST.get('token', '')
-            password = request.POST.get('password', '')
-            if token and password:
-                s = Session.objects.get(pk=token).get_decoded()
-                user = Patient.objects.get(id=s['_auth_user_id'])
-                user.set_password(password)
-                user.save()
-                unexpired_sessions = Session.objects.filter(
-                    expire_date__gte=timezone.now())
-                [
-                    session.delete() for session in unexpired_sessions
-                    if str(user.pk) == session.get_decoded().get('_auth_user_id')
-                ]
-                result = '0'
+            data = json.loads(request.body.decode("utf-8"))
+            token = data['token']
+            password = data['password']
+            s = Session.objects.get(pk=token).get_decoded()
+            user = Patient.objects.get(id=s['_auth_user_id'])
+            user.set_password(password)
+            user.save()
+            unexpired_sessions = Session.objects.filter(
+                expire_date__gte=timezone.now())
+            [
+                session.delete() for session in unexpired_sessions
+                if str(user.pk) == session.get_decoded().get('_auth_user_id')
+            ]
+            result = '0'
     except:
         pass
     return JsonResponse({'status': result})
@@ -255,9 +260,7 @@ def personal_info(request):
         user = Patient.objects.get(id=s['_auth_user_id'])
         # 7.個人資訊設定
         if request.method == 'PATCH':
-            patch = MultiPartParser(request.META, request,
-                                    request.upload_handlers).parse()[0].dict()
-            f = PersonalInfoForm(patch)
+            f = PersonalInfoForm(json.loads(request.body.decode("utf-8")))
             if f.is_valid():
                 data = f.cleaned_data
                 filtered = {i: data[i] for i in data if data[i]}
@@ -389,9 +392,7 @@ def default(request):
             'Authorization', '')).get_decoded()
         user = Patient.objects.get(id=s['_auth_user_id'])
         if request.method == 'PATCH':
-            patch = MultiPartParser(request.META, request,
-                                    request.upload_handlers).parse()[0].dict()
-            f = PersonalDefaultForm(patch)
+            f = PersonalDefaultForm(json.loads(request.body.decode("utf-8")))
             if f.is_valid():
                 data = f.cleaned_data
                 filtered = {i: data[i] for i in data if data[i]}
@@ -413,9 +414,7 @@ def setting(request):
             'Authorization', '')).get_decoded()
         user = Patient.objects.get(id=s['_auth_user_id'])
         if request.method == 'PATCH':
-            patch = MultiPartParser(request.META, request,
-                                    request.upload_handlers).parse()[0].dict()
-            f = SettingForm(patch)
+            f = SettingForm(json.loads(request.body.decode("utf-8")))
             if f.is_valid():
                 data = f.cleaned_data
                 filtered = {i: data[i] for i in data if data[i]}
@@ -437,10 +436,9 @@ def badge(request):
             'Authorization', '')).get_decoded()
         user = Patient.objects.get(id=s['_auth_user_id'])
         if request.method == 'PUT':
-            put = MultiPartParser(request.META, request,
-                                  request.upload_handlers).parse()[0].dict()
-            if 'badge' in put and put['badge'].isdigit():
-                user.badge = int(put['badge'])
+            put = json.loads(request.body.decode("utf-8"))
+            if 'badge' in put:
+                user.badge = put['badge']
                 user.save()
                 result = '0'
     except:
@@ -472,9 +470,7 @@ def medical(request):
             ])
         # 31. 更新就醫資訊
         if request.method == 'PATCH':
-            patch = MultiPartParser(request.META, request,
-                                    request.upload_handlers).parse()[0].dict()
-            f = MedicalForm(patch)
+            f = MedicalForm(json.loads(request.body.decode("utf-8")))
             if f.is_valid():
                 data = f.cleaned_data
                 filtered = {i: data[i] for i in data if data[i]}
@@ -488,26 +484,100 @@ def medical(request):
     return JsonResponse(result)
 
 
+def a1c(request):
+    # 32.糖化血色素，33.送糖化血色素，34.刪除糖化血色素
+    result = {'status': '1'}
+    try:
+        s = Session.objects.get(pk=request.headers.get(
+            'Authorization', '')).get_decoded()
+        user = Patient.objects.get(id=s['_auth_user_id'])
+        # 32.糖化血色素
+        if request.method == 'GET':
+            data = json.loads(request.body.decode("utf-8"))
+            result = OrderedDict([
+                ("status", '0'),
+                ("a1cs", [
+                    OrderedDict([
+                        ("id", a1c.id),
+                        ("user_id", int(a1c.user_id)),
+                        ("a1c", int(a1c.a1c)),
+                        ("recorded_at", str(a1c.recorded_at.replace(
+                            tzinfo=timezone.utc).astimezone(tz=None))[:19]),
+                        ("created_at", str(a1c.created_at.replace(
+                            tzinfo=timezone.utc).astimezone(tz=None))[:19]),
+                        ("updated_at", str(a1c.updated_at.replace(
+                            tzinfo=timezone.utc).astimezone(tz=None))[:19])
+                    ]) for a1c in user.a1cs_set.all()
+                ])
+            ])
+        # 33.送糖化血色素
+        if request.method == 'POST':
+            f = A1csForm(json.loads(request.body.decode("utf-8")))
+            if f.is_valid():
+                data = f.cleaned_data
+                filtered = {i: data[i] for i in data if data[i]}
+                if filtered:
+                    a1c = A1cs.objects.create(user_id=user.pk, patient=user)
+                    for i in filtered:
+                        setattr(a1c, i, data[i])
+                    a1c.save()
+                result = {'status': '0'}
+        # 34.刪除糖化血色素
+        if request.method == 'DELETE':
+            data = json.loads(request.body.decode("utf-8"))
+            if all([user.a1cs_set.filter(id=ids).exists() for ids in data["ids"]]):
+                [
+                    user.a1cs_set.get(id=ids).delete() for ids in data["ids"]
+                ]
+                result = {'status': '0'}
+    except:
+        pass
+    return JsonResponse(result)
+
+
 def drug_used(request):
     # 41.藥物資訊，42.上傳藥物資訊，43.刪除藥物資訊
     result = {'status': '1'}
-
-    s = Session.objects.get(pk=request.headers.get(
-        'Authorization', '')).get_decoded()
-    user = Patient.objects.get(id=s['_auth_user_id'])
-    # 42.上傳藥物資訊
-    if request.method == 'POST':
-        data = json.loads(request.body.decode("utf-8"))
-        f = DrugForm(data)
-        if f.is_valid():
-            data = f.cleaned_data
-            print(data)
-            filtered = {i: data[i] for i in data if data[i]}
-            if filtered:
-                drug = Drug.objects.create(user_id=user.pk, patient=user)
-                print(filtered)
-                for i in filtered:
-                    setattr(drug, i, data[i])
-                drug.save()
-            result = {'status': '0'}
+    try:
+        s = Session.objects.get(pk=request.headers.get(
+            'Authorization', '')).get_decoded()
+        user = Patient.objects.get(id=s['_auth_user_id'])
+        # 41.藥物資訊
+        if request.method == 'GET':
+            data = json.loads(request.body.decode("utf-8"))
+            result = OrderedDict([
+                ("status", '0'),
+                ("drug_used", [
+                    OrderedDict([
+                        ("id", drug.id),
+                        ("user_id", int(drug.user_id)),
+                        ("type", None if drug.type is None else int(drug.type)),
+                        ("name", drug.name),
+                        ("recorded_at", str(drug.recorded_at.replace(
+                            tzinfo=timezone.utc).astimezone(tz=None))[:19])
+                    ]) for drug in user.drug_set.filter(type=data['type'])
+                ])
+            ])
+        # 42.上傳藥物資訊
+        if request.method == 'POST':
+            f = DrugForm(json.loads(request.body.decode("utf-8")))
+            if f.is_valid():
+                data = f.cleaned_data
+                filtered = {i: data[i] for i in data if data[i]}
+                if filtered:
+                    drug = Drug.objects.create(user_id=user.pk, patient=user)
+                    for i in filtered:
+                        setattr(drug, i, data[i])
+                    drug.save()
+                result = {'status': '0'}
+        # 43.刪除藥物資訊
+        if request.method == 'DELETE':
+            data = json.loads(request.body.decode("utf-8"))
+            if all([user.drug_set.filter(id=ids).exists() for ids in data["ids"]]):
+                [
+                    user.drug_set.get(id=ids).delete() for ids in data["ids"]
+                ]
+                result = {'status': '0'}
+    except:
+        pass
     return JsonResponse(result)

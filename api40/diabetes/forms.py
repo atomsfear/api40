@@ -217,6 +217,12 @@ class MedicalForm(forms.Form):
         return self.cleaned_data
 
 
+class A1csForm(forms.Form):
+    a1c = forms.DecimalField(max_digits=6, decimal_places=0)
+    recorded_at = forms.DateTimeField(
+        input_formats=["%Y-%m-%d %H:%M:%S"], required=False)
+
+
 class DrugForm(forms.Form):
     type = forms.CharField(max_length=1, required=False)
     name = forms.CharField(max_length=50, required=False)

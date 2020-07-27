@@ -35,6 +35,9 @@ urlpatterns = [
     path('api/user/default/', dv.default),  # 11.個人預設值
     path('api/user/setting/', dv.setting),  # 35.個人設定
 
+    #########糖化血色素#########
+    path('api/user/a1c/', dv.a1c),  # 32.糖化血色素，33.送糖化血色素，34.刪除糖化血色素
+
     ########就醫及藥物資訊########
     path('api/user/medical/', dv.medical),  # 30. 就醫資訊，31. 更新就醫資訊
     path('api/user/drug-used/', dv.drug_used),  # 41.藥物資訊，42.上傳藥物資訊，43.刪除藥物資訊
@@ -60,6 +63,9 @@ urlpatterns = [
     path('api/user', dv.personal_info),  # 7.個人資訊設定，12.個人資訊
     path('api/user/default', dv.default),  # 11.個人預設值
     path('api/user/setting', dv.setting),  # 35.個人設定
+
+    #########糖化血色素#########
+    path('api/user/a1c', dv.a1c),  # 32.糖化血色素，33.送糖化血色素，34.刪除糖化血色素
 
     ########就醫及藥物資訊########
     path('api/user/medical', dv.medical),  # 30. 就醫資訊，31. 更新就醫資訊
