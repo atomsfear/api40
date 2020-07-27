@@ -186,3 +186,47 @@ class SettingForm(forms.Form):
             if unit_of_height not in ['0', '1']:
                 raise forms.ValidationError("7")
         return self.cleaned_data
+
+
+class MedicalForm(forms.Form):
+    diabetes_type = forms.DecimalField(
+        max_digits=1, decimal_places=0, required=False)
+    oad = forms.CharField(max_length=1, required=False)
+    insulin = forms.CharField(max_length=1, required=False)
+    anti_hypertensives = forms.CharField(
+        max_length=1, required=False)
+
+    def clean(self):
+        diabetes_type = self.cleaned_data['diabetes_type']
+        oad = self.cleaned_data['oad']
+        insulin = self.cleaned_data['insulin']
+        anti_hypertensives = self.cleaned_data['anti_hypertensives']
+
+        if diabetes_type != "":
+            if diabetes_type not in [0, 1, 2, 3, 4]:
+                raise forms.ValidationError("1")
+        if oad != "":
+            if oad not in ['0', '1']:
+                raise forms.ValidationError("2")
+        if insulin != "":
+            if insulin not in ['0', '1']:
+                raise forms.ValidationError("3")
+        if anti_hypertensives != "":
+            if anti_hypertensives not in ['0', '1']:
+                raise forms.ValidationError("4")
+        return self.cleaned_data
+
+
+class DrugForm(forms.Form):
+    type = forms.CharField(max_length=1, required=False)
+    name = forms.CharField(max_length=50, required=False)
+    recorded_at = forms.DateTimeField(
+        input_formats=["%Y-%m-%d %H:%M:%S"], required=False)
+
+    def clean(self):
+        type = self.cleaned_data['type']
+
+        if type != "":
+            if type not in ['0', '1']:
+                raise forms.ValidationError("1")
+        return self.cleaned_data

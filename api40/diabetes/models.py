@@ -40,7 +40,10 @@ class Patient(User):
 class EmailAuth(models.Model):
     code = models.CharField(max_length=25)
     end_time = models.DecimalField(max_digits=10, decimal_places=0)
-    username = models.ForeignKey(Patient, on_delete=models.CASCADE)
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return self.patient.username
 
 
 class Default(models.Model):
@@ -115,6 +118,36 @@ class Setting(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
     patient = models.OneToOneField(Patient, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return self.patient.username
+
+
+class Medical(models.Model):
+    id = models.DecimalField(
+        max_digits=15, decimal_places=0, primary_key=True)
+    user_id = models.DecimalField(
+        max_digits=15, decimal_places=0, blank=True, null=True)
+    diabetes_type = models.DecimalField(
+        max_digits=1, decimal_places=0, default=0)
+    oad = models.CharField(max_length=1, default='0')
+    insulin = models.CharField(max_length=1, default='0')
+    anti_hypertensives = models.CharField(max_length=1, default='0')
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+    patient = models.OneToOneField(Patient, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return self.patient.username
+
+
+class Drug(models.Model):
+    user_id = models.DecimalField(
+        max_digits=15, decimal_places=0, blank=True, null=True)
+    type = models.CharField(max_length=1, default='0')
+    name = models.CharField(max_length=50, blank=True, null=True)
+    recorded_at = models.DateTimeField(default=timezone.now)
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
 
     def __str__(self):
         return self.patient.username
