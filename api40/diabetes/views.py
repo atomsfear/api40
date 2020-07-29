@@ -275,6 +275,7 @@ def personal_info(request):
                             if str(user.pk) == session.get_decoded().get('_auth_user_id')
                         ]
                         user.is_active = False
+                        user.verified = '0'
                     user.save()
                 result = {'status': '0'}
         # 12.個人資訊
