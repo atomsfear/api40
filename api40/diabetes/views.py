@@ -71,6 +71,12 @@ def auth(request):
                 if user.is_active:
                     request.session.create()
                     Auth.login(request, user)
+                    if "phone" in locals():
+                        user = phone[0]
+                    elif "email" in locals():
+                        user = email[0]
+                    else:
+                        user = Patient.objects.get(username=account)
                     user.login_times += 1
                     user.save()
                     result = '0'
@@ -110,7 +116,7 @@ def send(request):
                     duration = 3600
                     code = ''.join([random.choice(
                         string.ascii_letters + string.digits) for i in range(25)])
-                    EmailAuth.objects.filter(username=user).delete()
+                    EmailAuth.objects.filter(patient=user).delete()
                     EmailAuth.objects.create(code=code, end_time=int(
                         time.time()+duration), patient=user)
                     title = "meter123.com 信箱驗證碼"
@@ -255,19 +261,20 @@ def personal_info(request):
     # 7.個人資訊設定，12.個人資訊
     result = {'status': '1'}
     try:
-        s = Session.objects.get(pk=request.headers.get(
-            'Authorization', '')).get_decoded()
-        user = Patient.objects.get(id=s['_auth_user_id'])
         # 7.個人資訊設定
         if request.method == 'PATCH':
             f = PersonalInfoForm(json.loads(request.body.decode("utf-8")))
             if f.is_valid():
                 data = f.cleaned_data
+                token = data['token']
+                del data['token']
+                s = Session.objects.get(pk=token).get_decoded()
+                user = Patient.objects.get(id=s['_auth_user_id'])
                 filtered = {i: data[i] for i in data if data[i]}
                 if filtered:
-                    for i in filtered:
-                        setattr(user, i, data[i])
                     if 'email' in filtered:
+                        if Patient.object.filter(email=filtered['email']).exists():
+                            raise Exception
                         unexpired_sessions = Session.objects.filter(
                             expire_date__gte=timezone.now())
                         [
@@ -276,10 +283,15 @@ def personal_info(request):
                         ]
                         user.is_active = False
                         user.verified = '0'
+                    for i in filtered:
+                        setattr(user, i, filtered[i])
                     user.save()
                 result = {'status': '0'}
         # 12.個人資訊
         if request.method == 'GET':
+            s = Session.objects.get(pk=request.headers.get(
+                'Authorization', '')).get_decoded()
+            user = Patient.objects.get(id=s['_auth_user_id'])
             result = OrderedDict([('status', '0')])
             result['user'] = OrderedDict([
                 ("id", user.pk),
@@ -399,7 +411,7 @@ def default(request):
                 filtered = {i: data[i] for i in data if data[i]}
                 if filtered:
                     for i in filtered:
-                        setattr(user.default, i, data[i])
+                        setattr(user.default, i, filtered[i])
                     user.default.save()
                 result = '0'
     except:
@@ -421,7 +433,7 @@ def setting(request):
                 filtered = {i: data[i] for i in data if data[i]}
                 if filtered:
                     for i in filtered:
-                        setattr(user.setting, i, data[i])
+                        setattr(user.setting, i, filtered[i])
                     user.setting.save()
                 result = '0'
     except:
@@ -477,7 +489,7 @@ def medical(request):
                 filtered = {i: data[i] for i in data if data[i]}
                 if filtered:
                     for i in filtered:
-                        setattr(user.medical, i, data[i])
+                        setattr(user.medical, i, filtered[i])
                     user.medical.save()
                 result = {'status': '0'}
     except:
@@ -494,7 +506,6 @@ def a1c(request):
         user = Patient.objects.get(id=s['_auth_user_id'])
         # 32.糖化血色素
         if request.method == 'GET':
-            data = json.loads(request.body.decode("utf-8"))
             result = OrderedDict([
                 ("status", '0'),
                 ("a1cs", [
@@ -520,7 +531,7 @@ def a1c(request):
                 if filtered:
                     a1c = A1cs.objects.create(user_id=user.pk, patient=user)
                     for i in filtered:
-                        setattr(a1c, i, data[i])
+                        setattr(a1c, i, filtered[i])
                     a1c.save()
                 result = {'status': '0'}
         # 34.刪除糖化血色素
@@ -545,7 +556,6 @@ def drug_used(request):
         user = Patient.objects.get(id=s['_auth_user_id'])
         # 41.藥物資訊
         if request.method == 'GET':
-            data = json.loads(request.body.decode("utf-8"))
             result = OrderedDict([
                 ("status", '0'),
                 ("drug_used", [
@@ -556,7 +566,7 @@ def drug_used(request):
                         ("name", drug.name),
                         ("recorded_at", str(drug.recorded_at.replace(
                             tzinfo=timezone.utc).astimezone(tz=None))[:19])
-                    ]) for drug in user.drug_set.filter(type=data['type'])
+                    ]) for drug in user.drug_set.filter(type=request.GET['type'])
                 ])
             ])
         # 42.上傳藥物資訊
@@ -568,7 +578,7 @@ def drug_used(request):
                 if filtered:
                     drug = Drug.objects.create(user_id=user.pk, patient=user)
                     for i in filtered:
-                        setattr(drug, i, data[i])
+                        setattr(drug, i, filtered[i])
                     drug.save()
                 result = {'status': '0'}
         # 43.刪除藥物資訊

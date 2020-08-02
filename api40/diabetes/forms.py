@@ -40,6 +40,7 @@ class RegisterForm(forms.Form):
 
 
 class PersonalInfoForm(forms.Form):
+    token = forms.CharField(max_length=50, required=True)
     name = forms.CharField(max_length=50, required=False)
     birthday_regex = RegexValidator(regex=r'^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
     birthday = forms.CharField(
