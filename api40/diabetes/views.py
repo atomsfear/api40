@@ -271,9 +271,9 @@ def personal_info(request):
                 data = f.cleaned_data
                 filtered = {i: data[i] for i in data if data[i]}
                 if filtered:
+                    for i in filtered:
+                        setattr(user, i, filtered[i])
                     if 'email' in filtered:
-                        for i in filtered:
-                            setattr(user, i, filtered[i])
                         unexpired_sessions = Session.objects.filter(
                             expire_date__gte=timezone.now())
                         [
