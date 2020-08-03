@@ -261,20 +261,19 @@ def personal_info(request):
     # 7.個人資訊設定，12.個人資訊
     result = {'status': '1'}
     try:
+        s = Session.objects.get(pk=request.headers.get(
+            'Authorization', '')).get_decoded()
+        user = Patient.objects.get(id=s['_auth_user_id'])
         # 7.個人資訊設定
         if request.method == 'PATCH':
             f = PersonalInfoForm(json.loads(request.body.decode("utf-8")))
             if f.is_valid():
                 data = f.cleaned_data
-                token = data['token']
-                del data['token']
-                s = Session.objects.get(pk=token).get_decoded()
-                user = Patient.objects.get(id=s['_auth_user_id'])
                 filtered = {i: data[i] for i in data if data[i]}
                 if filtered:
                     if 'email' in filtered:
-                        if Patient.object.filter(email=filtered['email']).exists():
-                            raise Exception
+                        for i in filtered:
+                            setattr(user, i, filtered[i])
                         unexpired_sessions = Session.objects.filter(
                             expire_date__gte=timezone.now())
                         [
@@ -283,15 +282,10 @@ def personal_info(request):
                         ]
                         user.is_active = False
                         user.verified = '0'
-                    for i in filtered:
-                        setattr(user, i, filtered[i])
                     user.save()
                 result = {'status': '0'}
         # 12.個人資訊
         if request.method == 'GET':
-            s = Session.objects.get(pk=request.headers.get(
-                'Authorization', '')).get_decoded()
-            user = Patient.objects.get(id=s['_auth_user_id'])
             result = OrderedDict([('status', '0')])
             result['user'] = OrderedDict([
                 ("id", user.pk),
@@ -589,6 +583,46 @@ def drug_used(request):
                     user.drug_set.get(id=ids).delete() for ids in data["ids"]
                 ]
                 result = {'status': '0'}
+    except:
+        pass
+    return JsonResponse(result)
+
+
+def news(request):
+    # 29. 最新消息
+    result = {'status': '1'}
+    try:
+        if request.method == 'GET':
+            s = Session.objects.get(pk=request.headers.get(
+                'Authorization', '')).get_decoded()
+            user = Patient.objects.get(id=s['_auth_user_id'])
+            result = OrderedDict([
+                ('status', '0'),
+                ('news', [])
+            ])
+    except:
+        pass
+    return JsonResponse(result)
+
+
+def share(request, relation_type=3):
+    # 23.分享，24.查看分享（含自己分享出去的）
+    result = {'status': '1'}
+    try:
+        # 23.分享
+        if request.method == 'POST':
+            pass
+        # 24.查看分享（含自己分享出去的）
+        if request.method == 'GET':
+            s = Session.objects.get(pk=request.headers.get(
+                'Authorization', '')).get_decoded()
+            user = Patient.objects.get(id=s['_auth_user_id'])
+            if relation_type not in [0, 1, 2]:
+                raise Exception
+            result = OrderedDict([
+                ('status', '0'),
+                ('records', [])
+            ])
     except:
         pass
     return JsonResponse(result)

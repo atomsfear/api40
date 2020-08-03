@@ -43,6 +43,9 @@ urlpatterns = [
     path('api/user/drug-used/', dv.drug_used),  # 41.藥物資訊，42.上傳藥物資訊，43.刪除藥物資訊
 
     ############單一############
+    path('api/share/', dv.share),  # 23.分享
+    path('api/share/<int:relation_type>/', dv.share),  # 24.查看分享（含自己分享出去的）
+    path('api/news/', dv.news),  # 29. 最新消息
     path('api/user/badge/', dv.badge),  # 39.更新badge
 
 
@@ -72,5 +75,8 @@ urlpatterns = [
     path('api/user/drug-used', dv.drug_used),  # 41.藥物資訊，42.上傳藥物資訊，43.刪除藥物資訊
 
     ############單一############
+    path('api/share', dv.share),  # 23.分享
+    path('api/share/<int:relation_type>', dv.share),  # 24.查看分享（含自己分享出去的）
+    path('api/news', dv.news),  # 29. 最新消息
     path('api/user/badge', dv.badge),  # 39.更新badge
 ]
