@@ -48,8 +48,6 @@ urlpatterns = [
     path('api/news/', dv.news),  # 29. 最新消息
     path('api/user/badge/', dv.badge),  # 39.更新badge
 
-
-
     # 以下網址結尾無斜線。
 
     ###########登入###########
@@ -79,4 +77,26 @@ urlpatterns = [
     path('api/share/<int:relation_type>', dv.share),  # 24.查看分享（含自己分享出去的）
     path('api/news', dv.news),  # 29. 最新消息
     path('api/user/badge', dv.badge),  # 39.更新badge
+    ##########個人資訊##########
+    path('api/user', dv.personal_info),  # 7.個人資訊設定，12.個人資訊
+    path('api/user/default', dv.default),  # 11.個人預設值
+    path('api/user/blood/pressure', dv.ublood),  #血压
+    path('api/user/weight', dv.uweight),  #体重
+    path('api/user/blood/sugar', dv.ubloodsugar),  #血糖
+    path('api/user/diet', dv.userdiet),  # 饮食日记
+    path('api/user/diary', dv.diary),  # 日记列表
+    path('api/friend/code', dv.friendcode),  # 控糖团邀请码
+    path('api/user/records', dv.userrecords),  #上一笔资料
+    path('api/user/care', dv.usercare),  #发送关怀资讯
+    path('api/user/last-upload', dv.lastupload),  #最后更新时间
+    path('api/notification', dv.notification),  #親友團通知
+    path('api/friend/list', dv.friendlist),  #控糖团列表
+    path('api/friend/send', dv.friendsend),  #送出控糖团邀请
+    path('api/friend/requests', dv.friendrequests),  #获取控糖团邀请（列表）
+    path('api/friend/<int:idd>/accept', dv.friendaccept),  #接受控糖团邀请
+    path('api/friend/<int:idd>/remove', dv.friendremove),  #删除邀请
+    path('api/friend/<int:idd>/refuse', dv.friendrefuse),  #拒绝控糖团邀请
+    path('api/friend/results', dv.friendresults),  #控糖团结果
+    path('api/friend/remove', dv.friendremove),  #删除好友
+    # path('api/friend/<int:idd>/remove', dv.friendremove),  #拒绝控糖团邀请（只拒绝不删除）
 ]

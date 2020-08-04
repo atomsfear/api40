@@ -7,8 +7,9 @@ import datetime
 class RegisterForm(forms.Form):
     account = forms.CharField(max_length=50)
     phone_regex = RegexValidator(regex=r'^\+?1?\d{9,15}$')
-    phone = forms.CharField(
-        validators=[phone_regex], max_length=17, required=False)
+    phone = forms.CharField(validators=[phone_regex],
+                            max_length=17,
+                            required=False)
     email = forms.EmailField(max_length=50, required=False)
     password = forms.CharField(max_length=50)
 
@@ -43,18 +44,22 @@ class PersonalInfoForm(forms.Form):
     token = forms.CharField(max_length=50, required=True)
     name = forms.CharField(max_length=50, required=False)
     birthday_regex = RegexValidator(regex=r'^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
-    birthday = forms.CharField(
-        validators=[birthday_regex], max_length=10, required=False)
-    height = forms.DecimalField(
-        max_digits=19, decimal_places=16, required=False)
+    birthday = forms.CharField(validators=[birthday_regex],
+                               max_length=10,
+                               required=False)
+    height = forms.DecimalField(max_digits=19,
+                                decimal_places=16,
+                                required=False)
     gender = forms.CharField(max_length=50, required=False)
     fcm_id = forms.CharField(max_length=50, required=False)
     address = forms.CharField(max_length=50, required=False)
-    weight = forms.DecimalField(
-        max_digits=19, decimal_places=16, required=False)
+    weight = forms.DecimalField(max_digits=19,
+                                decimal_places=16,
+                                required=False)
     phone_regex = RegexValidator(regex=r'^\+?1?\d{9,15}$')
-    phone = forms.CharField(
-        validators=[phone_regex], max_length=17, required=False)
+    phone = forms.CharField(validators=[phone_regex],
+                            max_length=17,
+                            required=False)
     email = forms.EmailField(max_length=50, required=False)
 
     def clean(self):
@@ -90,8 +95,9 @@ class PersonalInfoForm(forms.Form):
         if birthday != "":
             s = birthday.split('-')
             try:
-                claim = datetime.date(
-                    year=int(s[0]), month=int(s[1]), day=int(s[2]))
+                claim = datetime.date(year=int(s[0]),
+                                      month=int(s[1]),
+                                      day=int(s[2]))
             except:
                 raise forms.ValidationError("A")
             days = (datetime.date.today() - claim).days
@@ -101,50 +107,72 @@ class PersonalInfoForm(forms.Form):
 
 
 class PersonalDefaultForm(forms.Form):
-    sugar_delta_max = forms.DecimalField(
-        max_digits=5, decimal_places=0, required=False)
-    sugar_delta_min = forms.DecimalField(
-        max_digits=5, decimal_places=0, required=False)
-    sugar_morning_max = forms.DecimalField(
-        max_digits=5, decimal_places=0, required=False)
-    sugar_morning_min = forms.DecimalField(
-        max_digits=5, decimal_places=0, required=False)
-    sugar_evening_max = forms.DecimalField(
-        max_digits=5, decimal_places=0, required=False)
-    sugar_evening_min = forms.DecimalField(
-        max_digits=5, decimal_places=0, required=False)
-    sugar_before_max = forms.DecimalField(
-        max_digits=5, decimal_places=0, required=False)
-    sugar_before_min = forms.DecimalField(
-        max_digits=5, decimal_places=0, required=False)
-    sugar_after_max = forms.DecimalField(
-        max_digits=5, decimal_places=0, required=False)
-    sugar_after_min = forms.DecimalField(
-        max_digits=5, decimal_places=0, required=False)
-    systolic_max = forms.DecimalField(
-        max_digits=5, decimal_places=0, required=False)
-    systolic_min = forms.DecimalField(
-        max_digits=5, decimal_places=0, required=False)
-    diastolic_max = forms.DecimalField(
-        max_digits=5, decimal_places=0, required=False)
-    diastolic_min = forms.DecimalField(
-        max_digits=5, decimal_places=0, required=False)
-    pulse_max = forms.DecimalField(
-        max_digits=5, decimal_places=0, required=False)
-    pulse_min = forms.DecimalField(
-        max_digits=5, decimal_places=0, required=False)
-    weight_max = forms.DecimalField(
-        max_digits=5, decimal_places=0, required=False)
-    weight_min = forms.DecimalField(
-        max_digits=5, decimal_places=0, required=False)
-    bmi_max = forms.DecimalField(
-        max_digits=5, decimal_places=0, required=False)
-    bmi_min = forms.DecimalField(
-        max_digits=5, decimal_places=0, required=False)
-    body_fat_max = forms.DecimalField(
-        max_digits=5, decimal_places=0, required=False)
-    body_fat_min = forms.DecimalField(
-        max_digits=5, decimal_places=0, required=False)
+    sugar_delta_max = forms.DecimalField(max_digits=5,
+                                         decimal_places=0,
+                                         required=False)
+    sugar_delta_min = forms.DecimalField(max_digits=5,
+                                         decimal_places=0,
+                                         required=False)
+    sugar_morning_max = forms.DecimalField(max_digits=5,
+                                           decimal_places=0,
+                                           required=False)
+    sugar_morning_min = forms.DecimalField(max_digits=5,
+                                           decimal_places=0,
+                                           required=False)
+    sugar_evening_max = forms.DecimalField(max_digits=5,
+                                           decimal_places=0,
+                                           required=False)
+    sugar_evening_min = forms.DecimalField(max_digits=5,
+                                           decimal_places=0,
+                                           required=False)
+    sugar_before_max = forms.DecimalField(max_digits=5,
+                                          decimal_places=0,
+                                          required=False)
+    sugar_before_min = forms.DecimalField(max_digits=5,
+                                          decimal_places=0,
+                                          required=False)
+    sugar_after_max = forms.DecimalField(max_digits=5,
+                                         decimal_places=0,
+                                         required=False)
+    sugar_after_min = forms.DecimalField(max_digits=5,
+                                         decimal_places=0,
+                                         required=False)
+    systolic_max = forms.DecimalField(max_digits=5,
+                                      decimal_places=0,
+                                      required=False)
+    systolic_min = forms.DecimalField(max_digits=5,
+                                      decimal_places=0,
+                                      required=False)
+    diastolic_max = forms.DecimalField(max_digits=5,
+                                       decimal_places=0,
+                                       required=False)
+    diastolic_min = forms.DecimalField(max_digits=5,
+                                       decimal_places=0,
+                                       required=False)
+    pulse_max = forms.DecimalField(max_digits=5,
+                                   decimal_places=0,
+                                   required=False)
+    pulse_min = forms.DecimalField(max_digits=5,
+                                   decimal_places=0,
+                                   required=False)
+    weight_max = forms.DecimalField(max_digits=5,
+                                    decimal_places=0,
+                                    required=False)
+    weight_min = forms.DecimalField(max_digits=5,
+                                    decimal_places=0,
+                                    required=False)
+    bmi_max = forms.DecimalField(max_digits=5,
+                                 decimal_places=0,
+                                 required=False)
+    bmi_min = forms.DecimalField(max_digits=5,
+                                 decimal_places=0,
+                                 required=False)
+    body_fat_max = forms.DecimalField(max_digits=5,
+                                      decimal_places=0,
+                                      required=False)
+    body_fat_min = forms.DecimalField(max_digits=5,
+                                      decimal_places=0,
+                                      required=False)
 
 
 class SettingForm(forms.Form):
@@ -190,12 +218,12 @@ class SettingForm(forms.Form):
 
 
 class MedicalForm(forms.Form):
-    diabetes_type = forms.DecimalField(
-        max_digits=1, decimal_places=0, required=False)
+    diabetes_type = forms.DecimalField(max_digits=1,
+                                       decimal_places=0,
+                                       required=False)
     oad = forms.CharField(max_length=1, required=False)
     insulin = forms.CharField(max_length=1, required=False)
-    anti_hypertensives = forms.CharField(
-        max_length=1, required=False)
+    anti_hypertensives = forms.CharField(max_length=1, required=False)
 
     def clean(self):
         diabetes_type = self.cleaned_data['diabetes_type']
@@ -220,15 +248,15 @@ class MedicalForm(forms.Form):
 
 class A1csForm(forms.Form):
     a1c = forms.DecimalField(max_digits=6, decimal_places=0)
-    recorded_at = forms.DateTimeField(
-        input_formats=["%Y-%m-%d %H:%M:%S"], required=False)
+    recorded_at = forms.DateTimeField(input_formats=["%Y-%m-%d %H:%M:%S"],
+                                      required=False)
 
 
 class DrugForm(forms.Form):
     type = forms.CharField(max_length=1, required=False)
     name = forms.CharField(max_length=50, required=False)
-    recorded_at = forms.DateTimeField(
-        input_formats=["%Y-%m-%d %H:%M:%S"], required=False)
+    recorded_at = forms.DateTimeField(input_formats=["%Y-%m-%d %H:%M:%S"],
+                                      required=False)
 
     def clean(self):
         type = self.cleaned_data['type']
@@ -237,3 +265,97 @@ class DrugForm(forms.Form):
             if type not in ['0', '1']:
                 raise forms.ValidationError("1")
         return self.cleaned_data
+
+
+class UbloodForm(forms.Form):
+    systolic = forms.DecimalField(max_digits=5,
+                                  decimal_places=0,
+                                  required=False)
+    diastolic = forms.DecimalField(max_digits=5,
+                                   decimal_places=0,
+                                   required=False)
+    pulse = forms.DecimalField(max_digits=5, decimal_places=0, required=False)
+
+
+class UweightForm(forms.Form):
+    weight = forms.DecimalField(max_digits=5, decimal_places=0, required=False)
+    body_fat = forms.DecimalField(max_digits=5,
+                                  decimal_places=0,
+                                  required=False)
+    bmi = forms.DecimalField(max_digits=5, decimal_places=0, required=False)
+    # recorded_at = forms.TimeField
+
+
+class UbloodsugarForm(forms.Form):
+    sugar = forms.DecimalField(max_digits=5, decimal_places=0, required=False)
+    timeperiod = forms.DecimalField(max_digits=5,
+                                    decimal_places=0,
+                                    required=False)
+
+
+class DietForm(forms.Form):
+    description = forms.DecimalField(max_digits=5,
+                                     decimal_places=0,
+                                     required=False)
+    meal = forms.DecimalField(max_digits=5, decimal_places=0, required=False)
+    tag = forms.DecimalField(max_digits=5, decimal_places=0, required=False)
+    image = forms.DecimalField(max_digits=5, decimal_places=0, required=False)
+    lat = forms.DecimalField(max_digits=5, decimal_places=0, required=False)
+    lng = forms.DecimalField(max_digits=5, decimal_places=0, required=False)
+
+
+class CareForm(forms.Form):
+    message = forms.CharField(max_length=25, required=False)
+
+
+class NotificationForm(forms.Form):
+    message = forms.CharField(max_length=25, required=False)
+
+
+class receiveForm(forms.Form):
+    atype = forms.CharField(max_length=25, required=False)
+    invite_code = forms.CharField(max_length=25, required=False)
+
+
+# class DictForm(forms.Form):
+#     weight = models.DecimalField(
+#         max_digits=5, decimal_places=0, blank=True, null=True, default=0)
+#     body_fat = models.DecimalField(
+#         max_digits=5, decimal_places=0, blank=True, null=True, default=0)
+#     bmi = models.DecimalField(
+#         max_digits=5, decimal_places=0, blank=True, null=True, default=0)
+#     # pub_date=models.DateTimeField(u'發表時間',auto_now_add=True,editable=True)
+#     update_time=models.DateTimeField(u'更新時間',auto_now=True,null=True)
+#     created_at = models.DateTimeField(default=timezone.now)
+#     # recorded_at = models.TimeField()
+#     patient = models.OneToOneField(Patient, on_delete=models.CASCADE,null=True)
+#     def __str__(self):
+#         update_time = str(self.update_time)
+#         return update_time
+
+# class userbloodsugar(models.Model):
+#     sugar = models.DecimalField(
+#         max_digits=5, decimal_places=0, blank=True, null=True, default=0)
+#     timeperiod = models.DecimalField(
+#         max_digits=5, decimal_places=0, blank=True, null=True, default=0)
+#     update_time=models.DateTimeField(u'更新時間',auto_now=True,null=True)
+#     created_at = models.DateTimeField(default=timezone.now)
+#     # recorded_at = models.TimeField
+#     patient = models.OneToOneField(Patient, on_delete=models.CASCADE,null=True)
+#     def __str__(self):
+#         update_time = str(self.update_time)
+#         return update_time
+
+# class dictFrom(forms.Form):
+#     description = models.DecimalField(
+#         max_digits=5, decimal_places=0, blank=True, null=True, default=0)
+#     meal = models.DecimalField(
+#         max_digits=5, decimal_places=0, blank=True, null=True, default=0)
+#     tag = models.DecimalField(
+#         max_digits=5, decimal_places=0, blank=True, null=True, default=0)
+#     image = models.DecimalField(
+#         max_digits=5, decimal_places=0, blank=True, null=True, default=0)
+#     lat = models.DecimalField(
+#         max_digits=5, decimal_places=6, blank=True, null=True, default=0)
+#     lng = models.DecimalField(
+#         max_digits=5, decimal_places=6, blank=True, null=True, default=0)
