@@ -20,16 +20,22 @@ def register(request):
     result = '1'
     try:
         if request.method == 'POST':
-            f = RegisterForm(json.loads(request.body.decode("utf-8")))
+            data = request.body.decode("utf-8")
+            data = {
+                i.split('=')[0]: i.split('=')[1]
+                for i in data.replace('%40', '@').split('&') if i.split('=')[1]
+            }
+            print(data)
+            f = RegisterForm(data)
             if f.is_valid():
+                print(f.cleaned_data)
                 account = f.cleaned_data['account']
                 phone = f.cleaned_data['phone']
                 email = f.cleaned_data['email']
                 password = f.cleaned_data['password']
                 user = Patient.objects.create(username=account,
                                               email=email,
-                                              phone=phone,
-                                              is_active=False)
+                                              phone=phone)
                 user.set_password(password)
                 Default.objects.create(id=user.pk,
                                        user_id=user.pk,
@@ -57,7 +63,11 @@ def auth(request):
     result = '1'
     try:
         if request.method == 'POST':
-            data = json.loads(request.body.decode("utf-8"))
+            data = request.body.decode("utf-8")
+            data = {
+                i.split('=')[0]: i.split('=')[1]
+                for i in data.replace('%40', '@').split('&') if i.split('=')[1]
+            }
             account = data['account'] if 'account' in data else ''
             password = data['password'] if 'password' in data else ''
             verified = False
@@ -110,46 +120,27 @@ def send(request):
     result = '1'
     try:
         if request.method == 'POST':
-            data = json.loads(request.body.decode("utf-8"))
-            phone = data['phone'] if 'phone' in data else ''
-            email = data['email'] if 'email' in data else ''
-            if phone or email:
-                if email:
-                    try:
-                        user = Patient.objects.get(email=email)
-                    except Patient.DoesNotExist:
-                        user = None
-                    if user is None:
-                        user = Patient.objects.get(phone=phone)
-                        if user.email in ['', None]:
-                            raise Exception
-                else:
-                    user = Patient.objects.get(phone=phone)
-                    if user.email in ['', None]:
-                        raise Exception
-                if not user.is_active:
-                    duration = 3600
-                    code = ''.join([
-                        random.choice(string.ascii_letters + string.digits)
-                        for i in range(5)
-                    ])
-                    EmailAuth.objects.filter(patient=user).delete()
-                    EmailAuth.objects.create(code=code,
-                                             end_time=int(time.time() +
-                                                          duration),
-                                             patient=user)
-                    title = "meter123.com 信箱驗證碼"
-                    msg = 'code：' + code + '\nExpire：' + \
-                        time.strftime('%Y-%m-%d %H:%M:%S %z',
-                                      time.localtime(time.time()+duration))
-                    email_from = 'secretclubonly007@gmail.com'
-                    reciever = [user.email]
-                    send_mail(title,
-                              msg,
-                              email_from,
-                              reciever,
-                              fail_silently=False)
-                    result = '0'
+            data = request.body.decode("utf-8")
+            data = {
+                i.split('=')[0]: i.split('=')[1]
+                for i in data.replace('%40', '@').split('&') if i.split('=')[1]
+            }
+            print(data)
+            duration = 3600
+            code = ''.join([
+                random.choice(string.ascii_letters + string.digits)
+                for i in range(5)
+            ])
+            EmailAuth.objects.create(code=code,
+                                     end_time=int(time.time() + duration))
+            title = "meter123.com 信箱驗證碼"
+            msg = 'code：' + code + '\nExpire：' + \
+                time.strftime('%Y-%m-%d %H:%M:%S %z',
+                              time.localtime(time.time()+duration))
+            email_from = 'secretclubonly007@gmail.com'
+            reciever = [data['email']]
+            send_mail(title, msg, email_from, reciever, fail_silently=False)
+            result = '0'
     except:
         pass
     return JsonResponse({'status': result})
@@ -160,27 +151,14 @@ def vcheck(request):
     result = '1'
     try:
         if request.method == 'POST':
-            data = json.loads(request.body.decode("utf-8"))
-            code = data['code'] if 'code' in data else ''
-            phone = data['phone'] if 'phone' in data else ''
-            email = data['email'] if 'email' in data else ''
-            if code and phone:
-                verify = EmailAuth.objects.get(code=code)
-                user = verify.patient
-                if not user.is_active:
-                    if time.time() > verify.end_time:
-                        verify.delete()
-                        raise Exception
-                    if user.phone != phone:
-                        raise Exception
-                    if email:
-                        if user.email != email:
-                            raise Exception
-                    user.is_active = True
-                    user.verified = '1'
-                    user.save()
-                    verify.delete()
-                    result = '0'
+            data = request.body.decode("utf-8")
+            data = {
+                i.split('=')[0]: i.split('=')[1]
+                for i in data.replace('%40', '@').split('&') if i.split('=')[1]
+            }
+            verify = EmailAuth.objects.get(code=data['code'])
+            verify.delete()
+            result = '0'
     except:
         pass
     return JsonResponse({'status': result})
@@ -274,7 +252,7 @@ def privacy_policy(request):
 
 def rcheck(request):
     # 38.註冊確認
-    result = '1'
+    result = '0'
     try:
         if request.method == 'GET':
             Patient.objects.get(username=request.GET['account'])
@@ -290,7 +268,7 @@ def personal_info(request):
     # try:
     if 1:
         s = Session.objects.get(
-            pk=request.headers.get('Authorization', '')).get_decoded()
+            pk=request.headers.get('Authorization', '')[7:]).get_decoded()
         user = Patient.objects.get(id=s['_auth_user_id'])
         # 7.個人資訊設定
         if request.method == 'PATCH':
