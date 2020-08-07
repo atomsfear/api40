@@ -1,7 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
 import django.utils.timezone as timezone
-from django.contrib.postgres.fields import ArrayField
 # Create your models here.
 
 
@@ -289,21 +288,19 @@ class userbloodsugar(models.Model):
 
 
 class dietmod(models.Model):
-    description = models.DecimalField(max_digits=5,
-                                      decimal_places=0,
-                                      blank=True,
-                                      null=True,
-                                      default=0)
+    description = models.CharField(max_length=100,
+                                   blank=True,
+                                   null=True,
+                                   default=0)
     meal = models.DecimalField(max_digits=5,
                                decimal_places=0,
                                blank=True,
                                null=True,
                                default=0)
-    tag = models.DecimalField(max_digits=5,
-                              decimal_places=0,
-                              blank=True,
-                              null=True,
-                              default=0)
+    tag = models.CharField(max_length=100,
+                           blank=True,
+                           null=True,
+                           default=0)
     image = models.DecimalField(max_digits=5,
                                 decimal_places=0,
                                 blank=True,
@@ -350,7 +347,7 @@ class notificationmod(models.Model):
         return update_time
 
 
-class friendmod(models.Model):  #纪录是否為好友
+class friendmod(models.Model):  # 纪录是否為好友
     afriend = models.ForeignKey(Patient,
                                 on_delete=models.CASCADE,
                                 null=True,
@@ -359,17 +356,22 @@ class friendmod(models.Model):  #纪录是否為好友
                                 on_delete=models.CASCADE,
                                 null=True,
                                 related_name='relay_to_user')
+    atype = models.CharField(max_length=25, null=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
 
 
 class receivemod(models.Model):
     areceive = models.ForeignKey(Patient,
                                  on_delete=models.CASCADE,
                                  null=True,
-                                 related_name='areceive_user')  #邀
+                                 related_name='areceive_user')  # 邀
     breceive = models.ForeignKey(Patient,
                                  on_delete=models.CASCADE,
                                  null=True,
-                                 related_name='breceive_user')  #被邀
+                                 related_name='breceive_user')  # 被邀
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
     atype = models.CharField(max_length=25, null=True)
 
     accept_or_not = models.CharField(max_length=1, null=True)

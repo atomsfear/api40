@@ -15,7 +15,6 @@ class RegisterForm(forms.Form):
 
 
 class PersonalInfoForm(forms.Form):
-    token = forms.CharField(max_length=50, required=True)
     name = forms.CharField(max_length=50, required=False)
     birthday_regex = RegexValidator(regex=r'^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
     birthday = forms.CharField(validators=[birthday_regex],
@@ -43,20 +42,6 @@ class PersonalInfoForm(forms.Form):
         weight = self.cleaned_data['weight']
         height = self.cleaned_data['height']
         birthday = self.cleaned_data['birthday']
-        if email != "":
-            if Patient.objects.filter(email=email).exists():
-                raise forms.ValidationError("1")
-            if Patient.objects.filter(phone=email).exists():
-                raise forms.ValidationError("2")
-            if Patient.objects.filter(username=email).exists():
-                raise forms.ValidationError("3")
-        if phone != "":
-            if Patient.objects.filter(email=phone).exists():
-                raise forms.ValidationError("4")
-            if Patient.objects.filter(phone=phone).exists():
-                raise forms.ValidationError("5")
-            if Patient.objects.filter(username=phone).exists():
-                raise forms.ValidationError("6")
         if gender != "":
             if gender not in ['0', '1']:
                 raise forms.ValidationError("7")
@@ -252,11 +237,11 @@ class UbloodForm(forms.Form):
 
 
 class UweightForm(forms.Form):
-    weight = forms.DecimalField(max_digits=5, decimal_places=0, required=False)
+    weight = forms.DecimalField(max_digits=5, decimal_places=1, required=False)
     body_fat = forms.DecimalField(max_digits=5,
-                                  decimal_places=0,
+                                  decimal_places=1,
                                   required=False)
-    bmi = forms.DecimalField(max_digits=5, decimal_places=0, required=False)
+    bmi = forms.DecimalField(max_digits=5, decimal_places=1, required=False)
     # recorded_at = forms.TimeField
 
 
@@ -268,11 +253,9 @@ class UbloodsugarForm(forms.Form):
 
 
 class DietForm(forms.Form):
-    description = forms.DecimalField(max_digits=5,
-                                     decimal_places=0,
-                                     required=False)
+    description = forms.CharField(max_length=100, required=False)
     meal = forms.DecimalField(max_digits=5, decimal_places=0, required=False)
-    tag = forms.DecimalField(max_digits=5, decimal_places=0, required=False)
+    tag = forms.CharField(max_length=100, required=False)
     image = forms.DecimalField(max_digits=5, decimal_places=0, required=False)
     lat = forms.DecimalField(max_digits=5, decimal_places=0, required=False)
     lng = forms.DecimalField(max_digits=5, decimal_places=0, required=False)
@@ -287,7 +270,7 @@ class NotificationForm(forms.Form):
 
 
 class receiveForm(forms.Form):
-    atype = forms.CharField(max_length=25, required=False)
+    type = forms.CharField(max_length=25, required=False)
     invite_code = forms.CharField(max_length=25, required=False)
 
 

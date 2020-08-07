@@ -47,7 +47,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'apitest.urls'
+ROOT_URLCONF = 'api40.urls'
 
 TEMPLATES = [
     {
@@ -65,7 +65,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'apitest.wsgi.application'
+WSGI_APPLICATION = 'api40.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases

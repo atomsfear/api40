@@ -15,6 +15,14 @@ import json
 # Create your views here.
 
 
+def to_int(value):
+    return None if value is None else int(value)
+
+
+def to_float(value):
+    return None if value is None else float(value)
+
+
 def register(request):
     # 1.註冊
     result = '1'
@@ -25,10 +33,8 @@ def register(request):
                 i.split('=')[0]: i.split('=')[1]
                 for i in data.replace('%40', '@').split('&') if i.split('=')[1]
             }
-            print(data)
             f = RegisterForm(data)
             if f.is_valid():
-                print(f.cleaned_data)
                 account = f.cleaned_data['account']
                 phone = f.cleaned_data['phone']
                 email = f.cleaned_data['email']
@@ -47,10 +53,12 @@ def register(request):
                                        user_id=user.pk,
                                        patient=user)
                 user.invite_code = ''.join([
-                    random.choice(string.ascii_letters + string.digits)
+                    random.choice(string.digits)
                     for i in range(6)
                 ])
                 user.set_password(password)
+                user.verified = '0'
+                user.privacy_policy = '1'
                 user.save()
                 result = '0'
     except:
@@ -125,7 +133,6 @@ def send(request):
                 i.split('=')[0]: i.split('=')[1]
                 for i in data.replace('%40', '@').split('&') if i.split('=')[1]
             }
-            print(data)
             duration = 3600
             code = ''.join([
                 random.choice(string.ascii_letters + string.digits)
@@ -167,9 +174,14 @@ def vcheck(request):
 def forgot(request):
     # 5.忘記密碼
     result = '1'
-    try:
+    # try:
+    if 1:
         if request.method == 'POST':
-            data = json.loads(request.body.decode("utf-8"))
+            data = request.body.decode("utf-8")
+            data = {
+                i.split('=')[0]: i.split('=')[1]
+                for i in data.replace('%40', '@').split('&') if i.split('=')[1]
+            }
             email = data['email'] if 'email' in data else ''
             phone = data['phone'] if 'phone' in data else ''
             if phone or email:
@@ -186,11 +198,9 @@ def forgot(request):
                     user = Patient.objects.get(phone=phone)
                     if user.email in ['', None]:
                         raise Exception
-                if not user.is_active:
-                    raise Exception
                 new_password = ''.join([
                     random.choice(string.ascii_letters + string.digits)
-                    for i in range(12)
+                    for i in range(4)
                 ])
                 title = "meter123.com 新密碼"
                 msg = '請使用新密碼登入！！\n新密碼：' + new_password
@@ -202,16 +212,12 @@ def forgot(request):
                           reciever,
                           fail_silently=False)
                 user.set_password(new_password)
+                user.must_change_password = '1'
                 user.save()
-                unexpired_sessions = Session.objects.filter(
-                    expire_date__gte=timezone.now())
-                [
-                    session.delete() for session in unexpired_sessions if str(
-                        user.pk) == session.get_decoded().get('_auth_user_id')
-                ]
+
                 result = '0'
-    except:
-        pass
+    # except:
+    #    pass
     return JsonResponse({'status': result})
 
 
@@ -220,19 +226,18 @@ def reset(request):
     result = '1'
     try:
         if request.method == 'POST':
-            data = json.loads(request.body.decode("utf-8"))
-            token = data['token']
+            data = request.body.decode("utf-8")
+            data = {
+                i.split('=')[0]: i.split('=')[1]
+                for i in data.replace('%40', '@').split('&') if i.split('=')[1]
+            }
             password = data['password']
-            s = Session.objects.get(pk=token).get_decoded()
+            s = Session.objects.get(
+                pk=request.headers.get('Authorization', '')[7:]).get_decoded()
             user = Patient.objects.get(id=s['_auth_user_id'])
             user.set_password(password)
+            user.must_change_password = '0'
             user.save()
-            unexpired_sessions = Session.objects.filter(
-                expire_date__gte=timezone.now())
-            [
-                session.delete() for session in unexpired_sessions
-                if str(user.pk) == session.get_decoded().get('_auth_user_id')
-            ]
             result = '0'
     except:
         pass
@@ -256,7 +261,7 @@ def rcheck(request):
     try:
         if request.method == 'GET':
             Patient.objects.get(username=request.GET['account'])
-            result = '0'
+            result = '1'
     except:
         pass
     return JsonResponse({'status': result})
@@ -272,23 +277,18 @@ def personal_info(request):
         user = Patient.objects.get(id=s['_auth_user_id'])
         # 7.個人資訊設定
         if request.method == 'PATCH':
-            f = PersonalInfoForm(json.loads(request.body.decode("utf-8")))
+            data = request.body.decode("utf-8")
+            data = {
+                i.split('=')[0]: i.split('=')[1]
+                for i in data.replace('%40', '@').split('&') if i.split('=')[1]
+            }
+            f = PersonalInfoForm(data)
             if f.is_valid():
                 data = f.cleaned_data
                 filtered = {i: data[i] for i in data if data[i]}
                 if filtered:
                     for i in filtered:
                         setattr(user, i, filtered[i])
-                    if 'email' in filtered:
-                        unexpired_sessions = Session.objects.filter(
-                            expire_date__gte=timezone.now())
-                        [
-                            session.delete() for session in unexpired_sessions
-                            if str(user.pk) == session.get_decoded().get(
-                                '_auth_user_id')
-                        ]
-                        user.is_active = False
-                        user.verified = '0'
                     user.save()
                 result = {'status': '0'}
         # 12.個人資訊
@@ -310,7 +310,7 @@ def personal_info(request):
                     int(user.unread_records_one), user.unread_records_two,
                     int(user.unread_records_three)
                 ]), ("verified", int(user.verified)),
-                ("private_policy", int(user.privacy_policy)),
+                ("privacy_policy", int(user.privacy_policy)),
                 ("must_change_password", int(user.must_change_password)),
                 ("fcm_id", user.fcm_id), ("badge", int(user.badge)),
                 ("login_times", int(user.login_times)),
@@ -424,10 +424,15 @@ def default(request):
     result = '1'
     try:
         s = Session.objects.get(
-            pk=request.headers.get('Authorization', '')).get_decoded()
+            pk=request.headers.get('Authorization', '')[7:]).get_decoded()
         user = Patient.objects.get(id=s['_auth_user_id'])
         if request.method == 'PATCH':
-            f = PersonalDefaultForm(json.loads(request.body.decode("utf-8")))
+            data = request.body.decode("utf-8")
+            data = {
+                i.split('=')[0]: i.split('=')[1]
+                for i in data.replace('%40', '@').split('&') if i.split('=')[1]
+            }
+            f = PersonalDefaultForm(data)
             if f.is_valid():
                 data = f.cleaned_data
                 filtered = {i: data[i] for i in data if data[i]}
@@ -446,10 +451,15 @@ def setting(request):
     result = '1'
     try:
         s = Session.objects.get(
-            pk=request.headers.get('Authorization', '')).get_decoded()
+            pk=request.headers.get('Authorization', '')[7:]).get_decoded()
         user = Patient.objects.get(id=s['_auth_user_id'])
         if request.method == 'PATCH':
-            f = SettingForm(json.loads(request.body.decode("utf-8")))
+            data = request.body.decode("utf-8")
+            data = {
+                i.split('=')[0]: i.split('=')[1]
+                for i in data.replace('%40', '@').split('&') if i.split('=')[1]
+            }
+            f = SettingForm(data)
             if f.is_valid():
                 data = f.cleaned_data
                 filtered = {i: data[i] for i in data if data[i]}
@@ -468,12 +478,16 @@ def badge(request):
     result = '1'
     try:
         s = Session.objects.get(
-            pk=request.headers.get('Authorization', '')).get_decoded()
+            pk=request.headers.get('Authorization', '')[7:]).get_decoded()
         user = Patient.objects.get(id=s['_auth_user_id'])
         if request.method == 'PUT':
-            put = json.loads(request.body.decode("utf-8"))
-            if 'badge' in put:
-                user.badge = put['badge']
+            data = request.body.decode("utf-8")
+            data = {
+                i.split('=')[0]: i.split('=')[1]
+                for i in data.replace('%40', '@').split('&') if i.split('=')[1]
+            }
+            if 'badge' in data:
+                user.badge = data['badge']
                 user.save()
                 result = '0'
     except:
@@ -486,7 +500,7 @@ def medical(request):
     result = {'status': '1'}
     try:
         s = Session.objects.get(
-            pk=request.headers.get('Authorization', '')).get_decoded()
+            pk=request.headers.get('Authorization', '')[7:]).get_decoded()
         user = Patient.objects.get(id=s['_auth_user_id'])
         # 30. 就醫資訊
         if request.method == 'GET':
@@ -509,7 +523,12 @@ def medical(request):
             ])
         # 31. 更新就醫資訊
         if request.method == 'PATCH':
-            f = MedicalForm(json.loads(request.body.decode("utf-8")))
+            data = request.body.decode("utf-8")
+            data = {
+                i.split('=')[0]: i.split('=')[1]
+                for i in data.replace('%40', '@').replace('%20', ' ').replace('%3A', ':').split('&') if i.split('=')[1]
+            }
+            f = MedicalForm(data)
             if f.is_valid():
                 data = f.cleaned_data
                 filtered = {i: data[i] for i in data if data[i]}
@@ -523,12 +542,12 @@ def medical(request):
     return JsonResponse(result)
 
 
-def a1c(request):
+def a1c(request, dd=1):
     # 32.糖化血色素，33.送糖化血色素，34.刪除糖化血色素
     result = {'status': '1'}
     try:
         s = Session.objects.get(
-            pk=request.headers.get('Authorization', '')).get_decoded()
+            pk=request.headers.get('Authorization', '')[7:]).get_decoded()
         user = Patient.objects.get(id=s['_auth_user_id'])
         # 32.糖化血色素
         if request.method == 'GET':
@@ -536,7 +555,7 @@ def a1c(request):
                 ("status", '0'),
                 ("a1cs", [
                     OrderedDict([("id", a1c.id), ("user_id", int(a1c.user_id)),
-                                 ("a1c", int(a1c.a1c)),
+                                 ("a1c", str(int(a1c.a1c))),
                                  ("recorded_at",
                                   str(
                                       a1c.recorded_at.replace(
@@ -557,7 +576,12 @@ def a1c(request):
             ])
         # 33.送糖化血色素
         if request.method == 'POST':
-            f = A1csForm(json.loads(request.body.decode("utf-8")))
+            data = request.body.decode("utf-8")
+            data = {
+                i.split('=')[0]: i.split('=')[1]
+                for i in data.replace('%40', '@').replace('%20', ' ').replace('%3A', ':').split('&') if i.split('=')[1]
+            }
+            f = A1csForm(data)
             if f.is_valid():
                 data = f.cleaned_data
                 filtered = {i: data[i] for i in data if data[i]}
@@ -569,11 +593,13 @@ def a1c(request):
                 result = {'status': '0'}
         # 34.刪除糖化血色素
         if request.method == 'DELETE':
-            data = json.loads(request.body.decode("utf-8"))
+            data = request.get_full_path().split('?')[1]
+            data = [int(i.replace('ids%5B%5D%5B%5D=', ''))
+                    for i in data.split('&')]
             if all(
                 [user.a1cs_set.filter(id=ids).exists()
-                 for ids in data["ids"]]):
-                [user.a1cs_set.get(id=ids).delete() for ids in data["ids"]]
+                 for ids in data]):
+                [user.a1cs_set.get(id=ids).delete() for ids in data]
                 result = {'status': '0'}
     except:
         pass
@@ -583,15 +609,16 @@ def a1c(request):
 def drug_used(request):
     # 41.藥物資訊，42.上傳藥物資訊，43.刪除藥物資訊
     result = {'status': '1'}
-    try:
+    # try:
+    if 1:
         s = Session.objects.get(
-            pk=request.headers.get('Authorization', '')).get_decoded()
+            pk=request.headers.get('Authorization', '')[7:]).get_decoded()
         user = Patient.objects.get(id=s['_auth_user_id'])
         # 41.藥物資訊
         if request.method == 'GET':
             result = OrderedDict([
                 ("status", '0'),
-                ("drug_used", [
+                ("drug_useds", [
                     OrderedDict([
                         ("id", drug.id), ("user_id", int(drug.user_id)),
                         ("type",
@@ -608,7 +635,12 @@ def drug_used(request):
             ])
         # 42.上傳藥物資訊
         if request.method == 'POST':
-            f = DrugForm(json.loads(request.body.decode("utf-8")))
+            data = request.body.decode("utf-8")
+            data = {
+                i.split('=')[0]: i.split('=')[1]
+                for i in data.replace('%40', '@').replace('%20', ' ').replace('%3A', ':').split('&') if i.split('=')[1]
+            }
+            f = DrugForm(data)
             if f.is_valid():
                 data = f.cleaned_data
                 filtered = {i: data[i] for i in data if data[i]}
@@ -620,14 +652,16 @@ def drug_used(request):
                 result = {'status': '0'}
         # 43.刪除藥物資訊
         if request.method == 'DELETE':
-            data = json.loads(request.body.decode("utf-8"))
+            data = request.get_full_path().split('?')[1]
+            data = [int(i.replace('ids%5B%5D%5B%5D=', ''))
+                    for i in data.split('&')]
             if all(
                 [user.drug_set.filter(id=ids).exists()
-                 for ids in data["ids"]]):
-                [user.drug_set.get(id=ids).delete() for ids in data["ids"]]
+                 for ids in data]):
+                [user.drug_set.get(id=ids).delete() for ids in data]
                 result = {'status': '0'}
-    except:
-        pass
+    # except:
+    #    pass
     return JsonResponse(result)
 
 
@@ -637,7 +671,7 @@ def news(request):
     try:
         if request.method == 'GET':
             s = Session.objects.get(
-                pk=request.headers.get('Authorization', '')).get_decoded()
+                pk=request.headers.get('Authorization', '')[7:]).get_decoded()
             user = Patient.objects.get(id=s['_auth_user_id'])
             result = OrderedDict([('status', '0'), ('news', [])])
     except:
@@ -651,11 +685,17 @@ def share(request, relation_type=3):
     try:
         # 23.分享
         if request.method == 'POST':
-            pass
+            data = request.body.decode("utf-8")
+            data = {
+                i.split('=')[0]: i.split('=')[1]
+                for i in data.replace('%40', '@').replace('%20', ' ').replace('%3A', ':').split('&') if i.split('=')[1]
+            }
+            print(data)
+            result = {'status': '0'}
         # 24.查看分享（含自己分享出去的）
         if request.method == 'GET':
             s = Session.objects.get(
-                pk=request.headers.get('Authorization', '')).get_decoded()
+                pk=request.headers.get('Authorization', '')[7:]).get_decoded()
             user = Patient.objects.get(id=s['_auth_user_id'])
             if relation_type not in [0, 1, 2]:
                 raise Exception
@@ -665,13 +705,18 @@ def share(request, relation_type=3):
     return JsonResponse(result)
 
 
-def ublood(request):  #血压
+def ublood(request):  # 血压
     result = '1'
     if request.method == 'POST':
         s = Session.objects.get(
-            pk=request.headers.get('Authorization', '')).get_decoded()  #解密
-        user = Patient.objects.get(id=s['_auth_user_id'])  #决定user
-        form = UbloodForm(json.loads(request.body.decode("utf-8")))
+            pk=request.headers.get('Authorization', '')[7:]).get_decoded()  # 解密
+        user = Patient.objects.get(id=s['_auth_user_id'])  # 决定user
+        data = request.body.decode("utf-8")
+        data = {
+            i.split('=')[0]: i.split('=')[1]
+            for i in data.replace('%40', '@').replace('%20', ' ').replace('%3A', ':').split('&') if i.split('=')[1]
+        }
+        form = UbloodForm(data)
         if form.is_valid():
             systolic = form.cleaned_data['systolic']
             diastolic = form.cleaned_data['diastolic']
@@ -693,15 +738,20 @@ def ublood(request):  #血压
     return JsonResponse({'status': result})
 
 
-def uweight(request):  #体重
+def uweight(request):  # 体重
     result = '1'
     # try:
     if True:
         if request.method == 'POST':
             s = Session.objects.get(
-                pk=request.headers.get('Authorization', '')).get_decoded()  #解密
-            user = Patient.objects.get(id=s['_auth_user_id'])  #决定user
-            form = UweightForm(json.loads(request.body.decode("utf-8")))
+                pk=request.headers.get('Authorization', '')[7:]).get_decoded()  # 解密
+            user = Patient.objects.get(id=s['_auth_user_id'])  # 决定user
+            data = request.body.decode("utf-8")
+            data = {
+                i.split('=')[0]: i.split('=')[1]
+                for i in data.replace('%40', '@').replace('%20', ' ').replace('%3A', ':').split('&') if i.split('=')[1]
+            }
+            form = UweightForm(data)
             if form.is_valid():
                 weight = form.cleaned_data['weight']
                 body_fat = form.cleaned_data['body_fat']
@@ -720,13 +770,18 @@ def uweight(request):  #体重
     return JsonResponse({'status': result})
 
 
-def ubloodsugar(request):  #血糖
+def ubloodsugar(request):  # 血糖
     result = '1'
     if request.method == 'POST':
         s = Session.objects.get(
-            pk=request.headers.get('Authorization', '')).get_decoded()  #解密
-        user = Patient.objects.get(id=s['_auth_user_id'])  #决定user
-        form = UbloodsugarForm(json.loads(request.body.decode("utf-8")))
+            pk=request.headers.get('Authorization', '')[7:]).get_decoded()  # 解密
+        user = Patient.objects.get(id=s['_auth_user_id'])  # 决定user
+        data = request.body.decode("utf-8")
+        data = {
+            i.split('=')[0]: i.split('=')[1]
+            for i in data.replace('%40', '@').replace('%20', ' ').replace('%3A', ':').split('&') if i.split('=')[1]
+        }
+        form = UbloodsugarForm(data)
         if form.is_valid():
             sugar = form.cleaned_data['sugar']
             timeperiod = form.cleaned_data['timeperiod']
@@ -744,17 +799,27 @@ def ubloodsugar(request):  #血糖
     return JsonResponse({'status': result})
 
 
-def userdiet(request):  #饮食日记
+def userdiet(request):  # 饮食日记
     result = '1'
     if request.method == 'POST':
         s = Session.objects.get(
-            pk=request.headers.get('Authorization', '')).get_decoded()  #解密
-        user = Patient.objects.get(id=s['_auth_user_id'])  #决定user
-        form = DietForm(json.loads(request.body.decode("utf-8")))
+            pk=request.headers.get('Authorization', '')[7:]).get_decoded()  # 解密
+        user = Patient.objects.get(id=s['_auth_user_id'])  # 决定user
+        data = request.body.decode("utf-8")
+        data = data.replace('%40', '@').replace('%20',
+                                                ' ').replace('%3A', ':').split('&')
+        tag = [i.replace('tag%5B%5D%5B%5D=', '')
+               for i in data if 'tag%5B%5D%5B%5D=' in i]
+        tag = '?'.join(tag)
+        data = [i for i in data if 'tag%5B%5D%5B%5D=' not in i]
+        data = {
+            i.split('=')[0]: i.split('=')[1]
+            for i in data if i.split('=')[1]
+        }
+        form = DietForm(data)
         if form.is_valid():
             description = form.cleaned_data['description']
             meal = form.cleaned_data['meal']
-            tag = form.cleaned_data['tag']
             image = form.cleaned_data['image']
             lat = form.cleaned_data['lat']
             lng = form.cleaned_data['lng']
@@ -778,7 +843,7 @@ def userdiet(request):  #饮食日记
 def diary(request):
     result = {'status': '1'}
     s = Session.objects.get(
-        pk=request.headers.get('Authorization', '')).get_decoded()
+        pk=request.headers.get('Authorization', '')[7:]).get_decoded()
     user = Patient.objects.get(id=s['_auth_user_id'])
     if request.method == 'GET':
         try:
@@ -816,9 +881,9 @@ def diary(request):
                                   OrderedDict([
                                       ("id", r.id),
                                       ("user_id", user.pk),
-                                      ("systolic", r.systolic),
-                                      ("diastolic", r.diastolic),
-                                      ("pulse", r.pulse),
+                                      ("systolic", to_int(r.systolic)),
+                                      ("diastolic", to_int(r.diastolic)),
+                                      ("pulse", to_int(r.pulse)),
                                       ("recorded_at",
                                        str(
                                            r.update_time.replace(
@@ -834,9 +899,9 @@ def diary(request):
                                   OrderedDict([
                                       ("id", r.id),
                                       ("user_id", user.pk),
-                                      ("weight", r.weight),
-                                      ("body_fat", r.body_fat),
-                                      ("bmi", r.bmi),
+                                      ("weight", to_float(r.weight)),
+                                      ("body_fat", to_float(r.body_fat)),
+                                      ("bmi", to_float(r.bmi)),
                                       ("recorded_at",
                                        str(
                                            r.update_time.replace(
@@ -853,9 +918,9 @@ def diary(request):
                          OrderedDict([
                              ("id", user.userbloodsugar_set.last().id),
                              ("user_id", user.pk),
-                             ("sugar", user.userbloodsugar_set.last().sugar),
+                             ("sugar", to_int(user.userbloodsugar_set.last().sugar)),
                              ("timeperiod",
-                              user.userbloodsugar_set.last().timeperiod),
+                              to_int(user.userbloodsugar_set.last().timeperiod)),
                              ("recorded_at",
                               str(
                                   r.update_time.replace(
@@ -892,13 +957,14 @@ def diary(request):
                              ("reply", "hello"),
                          ]))
                     ]))
+        print(result)
     return JsonResponse(result)
 
 
 def friendcode(request):
     result = '1'
     s = Session.objects.get(
-        pk=request.headers.get('Authorization', '')).get_decoded()
+        pk=request.headers.get('Authorization', '')[7:]).get_decoded()
     user = Patient.objects.get(id=s['_auth_user_id'])
     if request.method == 'GET':
         fcode = user.invite_code
@@ -923,10 +989,10 @@ def friendcode(request):
 #         result = OrderedDict([('status', '0')])
 
 
-def userrecords(request):  #上一笔资料
+def userrecords(request):  # 上一笔资料
     result = {'status': '1'}
     s = Session.objects.get(
-        pk=request.headers.get('Authorization', '')).get_decoded()
+        pk=request.headers.get('Authorization', '')[7:]).get_decoded()
     user = Patient.objects.get(id=s['_auth_user_id'])
     if len(user.userblood_set.all()) > 1:
         blood = user.userblood_set.all()[len(user.userblood_set.all()) - 2]
@@ -948,41 +1014,48 @@ def userrecords(request):  #上一笔资料
             len(user.userbloodsugar_set.all()) - 1]
     else:
         bloodsugar = None
-    print("-------------------")
-    print(weight)
     if request.method == 'POST':
         result = OrderedDict([('status', '0')])
-        result['records'] = OrderedDict([
-            ("blood_pressure",
-             OrderedDict([
-                 ("id", blood.id),
-                 ("user_id", user.pk),
-                 ("systolic", blood.systolic),
-                 ("diastolic", blood.diastolic),
-                 ("pulse", blood.pulse),
-                 ("recorded_at", str(blood.update_time)),
-                 ("type", "blood_pressure"),
-             ])),
-            ("weight",
-             OrderedDict([
-                 ("id", weight.id),
-                 ("user_id", user.pk),
-                 ("weight", weight.weight),
-                 ("body_fat", weight.body_fat),
-                 ("bmi", weight.bmi),
-                 ("recorded_at", str(weight.update_time)),
-                 ("type", "weight"),
-             ])),
-            ("blood_sugar",
-             OrderedDict([
-                 ("id", bloodsugar.id),
-                 ("user_id", user.pk),
-                 ("sugar", bloodsugar.sugar),
-                 ("timeperiod", bloodsugar.timeperiod),
-                 ("recorded_at", str(bloodsugar.update_time)),
-                 ("type", "blood_sugar"),
-             ])),
-        ])
+        records = []
+        if blood is not None:
+            records.append(
+                ("blood_pressure",
+                 OrderedDict([
+                     ("id", blood.id),
+                     ("user_id", user.pk),
+                     ("systolic", blood.systolic),
+                     ("diastolic", blood.diastolic),
+                     ("pulse", blood.pulse),
+                     ("recorded_at", str(blood.update_time)),
+                     ("type", "blood_pressure"),
+                 ]))
+            )
+        if weight is not None:
+            records.append(
+                ("weight",
+                 OrderedDict([
+                     ("id", weight.id),
+                     ("user_id", user.pk),
+                     ("weight", weight.weight),
+                     ("body_fat", weight.body_fat),
+                     ("bmi", weight.bmi),
+                     ("recorded_at", str(weight.update_time)),
+                     ("type", "weight"),
+                 ]))
+            )
+        if bloodsugar is not None:
+            records.append(
+                ("blood_sugar",
+                 OrderedDict([
+                     ("id", bloodsugar.id),
+                     ("user_id", user.pk),
+                     ("sugar", bloodsugar.sugar),
+                     ("timeperiod", bloodsugar.timeperiod),
+                     ("recorded_at", str(bloodsugar.update_time)),
+                     ("type", "blood_sugar"),
+                 ]))
+            )
+        result['records'] = OrderedDict(records)
     if request.method == 'DELETE':
         data = json.loads(request.body.decode("utf-8"))
         if all([
@@ -1013,13 +1086,18 @@ def userrecords(request):  #上一笔资料
     return JsonResponse(result)
 
 
-def usercare(request):  #发送关怀资讯
+def usercare(request):  # 发送关怀资讯
     result = {'status': '1'}
     if request.method == 'POST':
         s = Session.objects.get(
-            pk=request.headers.get('Authorization', '')).get_decoded()
-        user = Patient.objects.get(id=s['_auth_user_id'])  #决定user
-        form = CareForm(json.loads(request.body.decode("utf-8")))
+            pk=request.headers.get('Authorization', '')[7:]).get_decoded()
+        user = Patient.objects.get(id=s['_auth_user_id'])  # 决定user
+        data = request.body.decode("utf-8")
+        data = {
+            i.split('=')[0]: i.split('=')[1]
+            for i in data.replace('%40', '@').replace('%20', ' ').replace('%3A', ':').split('&') if i.split('=')[1]
+        }
+        form = CareForm(data)
         if form.is_valid():
             message = form.cleaned_data['message']
             icare = care.objects.create(message=message, patient=user)
@@ -1029,39 +1107,47 @@ def usercare(request):  #发送关怀资讯
     if request.method == 'GET':
         result = {'status': '0'}
         s = Session.objects.get(
-            pk=request.headers.get('Authorization', '')).get_decoded()
+            pk=request.headers.get('Authorization', '')[7:]).get_decoded()
         user = Patient.objects.get(id=s['_auth_user_id'])
-        result = OrderedDict([('status', '0')])
-        result['cares'] = [
-            OrderedDict([
-                ("id", care.id),
-                ("user_id", user.pk),
-                ("message", care.message),
-                ("member_id", "1"),
-                ("reply_id", "1"),
-                ("updated_at", str(care.update_time)),
-            ]) for care in user.care_set.all()
-        ]
+        result = OrderedDict([
+            ('status', '0'),
+            ('cares', [
+                OrderedDict([
+                    ("id", care.id),
+                    ("user_id", user.pk),
+                    ("member_id", 0),
+                    ("reply_id", None),
+                    ("message", care.message),
+                    ("created_at", str(care.created_at.replace(
+                        tzinfo=timezone.utc).astimezone(
+                        tz=None))[:19]),
+                    ("updated_at", str(care.update_time.replace(
+                        tzinfo=timezone.utc).astimezone(
+                        tz=None))[:19]),
+                ]) for care in user.care_set.all()
+            ]
+            )
+        ])
         return JsonResponse(result)
 
 
-def friendlist(request):  #控糖团列表
+def friendlist(request):  # 控糖团列表
     result = {'status': '1'}
     if request.method == 'GET':
         result = {'status': '0'}
         s = Session.objects.get(
-            pk=request.headers.get('Authorization', '')).get_decoded()
+            pk=request.headers.get('Authorization', '')[7:]).get_decoded()
         user = Patient.objects.get(id=s['_auth_user_id'])
         result = OrderedDict([('status', '0')])
-        result['list'] = [
+        result['friends'] = [
             OrderedDict([
                 ("id", flist.id),
                 ("name", flist.bfriend.name),
                 ("account", flist.bfriend.username),
                 ("email", flist.bfriend.email),
                 ("phone", flist.bfriend.phone),
-                ("fb_id", flist.bfriend.phone),
-                ("status", flist.bfriend.phone),
+                ("fb_id", flist.bfriend.fb_id),
+                ("status", flist.bfriend.status),
                 ("group", flist.bfriend.group),
                 ("birthday", flist.bfriend.birthday),
                 ("height", flist.bfriend.height),
@@ -1070,20 +1156,50 @@ def friendlist(request):  #控糖团列表
                 ("privacy_policy", flist.bfriend.privacy_policy),
                 ("must_change_password", flist.bfriend.must_change_password),
                 ("badge", flist.bfriend.badge),
-                ("group", flist.bfriend.group),
-                ("group", flist.bfriend.group),
-                ("relation_type", "1"),  #暂定1
+                ("created_at", str(flist.created_at.replace(
+                    tzinfo=timezone.utc).astimezone(
+                    tz=None))[:19]),
+                ("updated_at", str(flist.updated_at.replace(
+                    tzinfo=timezone.utc).astimezone(
+                    tz=None))[:19]),
+                ("relation_type", to_int(flist.atype)),  # 暂定1
             ]) for flist in user.answers_user.all()
+        ]
+        [
+            result['friends'].append(OrderedDict([
+                ("id", flist.id),
+                ("name", flist.afriend.name),
+                ("account", flist.afriend.username),
+                ("email", flist.afriend.email),
+                ("phone", flist.afriend.phone),
+                ("fb_id", flist.afriend.fb_id),
+                ("status", flist.afriend.status),
+                ("group", flist.afriend.group),
+                ("birthday", flist.afriend.birthday),
+                ("height", flist.afriend.height),
+                ("gender", flist.afriend.gender),
+                ("verified", flist.afriend.verified),
+                ("privacy_policy", flist.afriend.privacy_policy),
+                ("must_change_password", flist.afriend.must_change_password),
+                ("badge", flist.afriend.badge),
+                ("created_at", str(flist.created_at.replace(
+                    tzinfo=timezone.utc).astimezone(
+                    tz=None))[:19]),
+                ("updated_at", str(flist.updated_at.replace(
+                    tzinfo=timezone.utc).astimezone(
+                    tz=None))[:19]),
+                ("relation_type", to_int(flist.atype)),  # 暂定1
+            ])) for flist in user.relay_to_user.all()
         ]
         return JsonResponse(result)
 
 
-def lastupload(request):  #最后更新时间
+def lastupload(request):  # 最后更新时间
     result = {'status': '1'}
     if request.method == 'GET':
         result = {'status': '0'}
         s = Session.objects.get(
-            pk=request.headers.get('Authorization', '')).get_decoded()
+            pk=request.headers.get('Authorization', '')[7:]).get_decoded()
         user = Patient.objects.get(id=s['_auth_user_id'])
         result = OrderedDict([('status', '0')])
         result['last_upload'] = OrderedDict([
@@ -1095,14 +1211,14 @@ def lastupload(request):  #最后更新时间
         return JsonResponse(result)
 
 
-def notification(request):  #親友團通知
+def notification(request):  # 親友團通知
     result = '1'
     # try:
     if True:
         if request.method == 'POST':
             s = Session.objects.get(
-                pk=request.POST.get('token', '')).get_decoded()  #解密
-            user = Patient.objects.get(id=s['_auth_user_id'])  #决定user
+                pk=request.POST.get('token', '')).get_decoded()  # 解密
+            user = Patient.objects.get(id=s['_auth_user_id'])  # 决定user
             form = NotificationForm(json.loads(request.body.decode("utf-8")))
             if form.is_valid():
                 message = form.cleaned_data['message']
@@ -1113,13 +1229,19 @@ def notification(request):  #親友團通知
     return JsonResponse({'status': result})
 
 
-def friendsend(request):  #送出控糖團邀請(知道别人的邀请码后，向邀请码的主人送邀请)
+def friendsend(request):  # 送出控糖團邀請(知道别人的邀请码后，向邀请码的主人送邀请)
     result = '1'
     if request.method == 'POST':
         s = Session.objects.get(
-            pk=request.headers.get('Authorization', '')).get_decoded()
+            pk=request.headers.get('Authorization', '')[7:]).get_decoded()
         user = Patient.objects.get(id=s['_auth_user_id'])
-        form = receiveForm(json.loads(request.body.decode("utf-8")))
+        data = request.body.decode("utf-8")
+        data = {
+            i.split('=')[0]: i.split('=')[1]
+            for i in data.replace('%40', '@').replace('%20', ' ').replace('%3A', ':').split('&') if i.split('=')[1]
+        }
+        print(data)
+        form = receiveForm(data)
         if form.is_valid():
             fri = Patient.objects.get(
                 invite_code=form.cleaned_data['invite_code'])
@@ -1131,21 +1253,23 @@ def friendsend(request):  #送出控糖團邀請(知道别人的邀请码后，�
             #     if user.id == aid.bfriend.id:
             #         result = '2'
             #         raise Exception("2")
-            atype = form.cleaned_data['atype']
+            atype = form.cleaned_data['type']
             aatype = receivemod.objects.create(atype=atype,
                                                areceive=user,
                                                breceive=fri)
+            print('-' * 50)
+            print(form.cleaned_data)
             aatype.save()
             result = '0'
     return JsonResponse({'status': result})
 
 
-def friendrequests(request):  #列出邀请列表
+def friendrequests(request):  # 列出邀请列表
     result = {'status': '1'}
     if request.method == 'GET':
         result = {'status': '0'}
         s = Session.objects.get(
-            pk=request.headers.get('Authorization', '')).get_decoded()
+            pk=request.headers.get('Authorization', '')[7:]).get_decoded()
         user = Patient.objects.get(id=s['_auth_user_id'])
         fri = user.breceive_user.all()
         result = OrderedDict([('status', '0')])
@@ -1153,9 +1277,9 @@ def friendrequests(request):  #列出邀请列表
             OrderedDict([
                 ("id", flist.id),
                 ("user_id", user.id),
-                ("relation_id", "1"),
-                ("type", flist.atype),
-                ("status", "0"),
+                ("relation_id", 4),
+                ("type", int(flist.atype)),
+                ("status", to_int(flist.accept_or_not)),
                 ("created_at", str(user.created_at)),
                 ("updated_at", str(user.updated_at)),
                 ("user",
@@ -1184,34 +1308,34 @@ def friendrequests(request):  #列出邀请列表
         return JsonResponse(result)
 
 
-def friendaccept(request, idd):  #接受
-    print("--------------------")
+def friendaccept(request, idd):  # 接受
     result = {'status': '1'}
     if request.method == 'GET':
         s = Session.objects.get(
-            pk=request.headers.get('Authorization', '')).get_decoded()
+            pk=request.headers.get('Authorization', '')[7:]).get_decoded()
         user = Patient.objects.get(id=s['_auth_user_id'])
         r = receivemod.objects.get(id=idd)
+        f = friendmod.objects
         acuser = user
         bcuser = r.areceive
-        print("--------------------")
+        # if user.id in [r.afriend.id, r.bfriend.id]:
+
         if user.id in [r.areceive.id, r.breceive.id]:
-            r.accept_or_not = '1'  #是否接受邀请1是0否
+            r.accept_or_not = '1'  # 是否接受邀请2是1否
             r.save()
-            print(r.accept_or_not)
-            print("--------------------")
-            friendaa = friendmod.objects.create(afriend=acuser, bfriend=bcuser)
+            friendaa = friendmod.objects.create(
+                afriend=acuser, bfriend=bcuser, atype=r.atype)
             friendaa.save()
             result = {'status': '0'}
     return JsonResponse(result)
 
 
-def friendremove(request, idd):  #删除邀请表
+def friendremove(request, idd):  # 删除邀请表
     result = {'status': '1'}
     if request.method == 'GET':
         result = {'status': '0'}
         s = Session.objects.get(
-            pk=request.headers.get('Authorization', '')).get_decoded()
+            pk=request.headers.get('Authorization', '')[7:]).get_decoded()
         user = Patient.objects.get(id=s['_auth_user_id'])
         r = receivemod.objects.get(id=idd)
         r.delete()
@@ -1219,32 +1343,28 @@ def friendremove(request, idd):  #删除邀请表
     return JsonResponse(result)
 
 
-def friendrefuse(request, idd):  #拒绝
-    print("--------------------")
+def friendrefuse(request, idd):  # 拒绝
     result = {'status': '1'}
     if request.method == 'GET':
         s = Session.objects.get(
-            pk=request.headers.get('Authorization', '')).get_decoded()
+            pk=request.headers.get('Authorization', '')[7:]).get_decoded()
         user = Patient.objects.get(id=s['_auth_user_id'])
         r = receivemod.objects.get(id=idd)
         acuser = user
         bcuser = r.areceive
-        print("--------------------")
         if user.id in [r.areceive.id, r.breceive.id]:
-            r.accept_or_not = '0'  #是否接受邀请1是0否
+            r.accept_or_not = '2'  # 是否接受邀请2是1否
             r.save()
-            print(r.accept_or_not)
-            print("--------------------")
             result = {'status': '0'}
     return JsonResponse(result)
 
 
-def friendresults(request):  #控糖团结果
+def friendresults(request):  # 控糖团结果
     result = {'status': '1'}
     if request.method == 'GET':
         result = {'status': '0'}
         s = Session.objects.get(
-            pk=request.headers.get('Authorization', '')).get_decoded()
+            pk=request.headers.get('Authorization', '')[7:]).get_decoded()
         user = Patient.objects.get(id=s['_auth_user_id'])
         fri = user.breceive_user.all()
         result = OrderedDict([('status', '0')])
@@ -1252,10 +1372,11 @@ def friendresults(request):  #控糖团结果
             OrderedDict([
                 ("id", flist.id),
                 ("user_id", user.id),
-                ("relation_id", "1"),
-                ("type", flist.atype),
-                ("status", flist.accept_or_not),
-                ("read", "true"),
+                ("relation_id", 2),
+                ("type", to_int(flist.atype)),  # flist.atype 決定哪個團
+                # flist.accept_or_not 1: 接受 2: 拒絕
+                ("status", int(flist.accept_or_not)),
+                ("read", True),
                 ("created_at", str(user.created_at)),
                 ("updated_at", str(user.updated_at)),
                 ("relation",
@@ -1269,32 +1390,48 @@ def friendresults(request):  #控糖团结果
                      ("status", "Normal"),
                      ("group", flist.areceive.group),
                      ("birthday", flist.areceive.birthday),
-                     ("height", flist.areceive.height),
-                     ("gender", flist.areceive.gender),
-                     ("unread_records", "[0,0,0]"),
-                     ("verified", flist.areceive.verified),
-                     ("privacy_policy", flist.areceive.privacy_policy),
+                     ("height", to_int(flist.areceive.height)),
+                     ("gender", to_int(flist.areceive.gender)),
+                     ("unread_records", [
+                         int(flist.areceive.unread_records_one), flist.areceive.unread_records_two,
+                         int(flist.areceive.unread_records_three)
+                     ]),
+                     ("verified", to_int(flist.areceive.verified)),
+                     ("privacy_policy", to_int(flist.areceive.privacy_policy)),
                      ("must_change_password",
-                      flist.areceive.must_change_password),
-                     ("badge", flist.areceive.badge),
-                     ("created_at", str(flist.areceive.created_at)),
-                     ("updated_at", str(flist.areceive.updated_at)),
+                      to_int(flist.areceive.must_change_password)),
+                     ("badge", to_int(flist.areceive.badge)),
+                     ("created_at", str(
+                         flist.areceive.created_at.replace(
+                             tzinfo=timezone.utc).astimezone(tz=None))[:19]),
+                     ("updated_at", str(
+                         flist.areceive.updated_at.replace(
+                             tzinfo=timezone.utc).astimezone(tz=None))[:19]),
                  ])),
-            ]) for flist in user.breceive_user.all()
+            ]) for flist in user.breceive_user.all() if flist.accept_or_not is not None
         ]
+        [flist.delete() for flist in user.breceive_user.all()
+         if flist.accept_or_not is not None]
         return JsonResponse(result)
 
 
-def friendremove(request):  #移除好友
+def friendremove(request):  # 移除好友
     result = {'status': '1'}
     s = Session.objects.get(
-        pk=request.headers.get('Authorization', '')).get_decoded()
+        pk=request.headers.get('Authorization', '')[7:]).get_decoded()
     user = Patient.objects.get(id=s['_auth_user_id'])
     if request.method == 'DELETE':
-        data = json.loads(request.body.decode("utf-8"))
-        if all(
-            [user.answers_user.filter(id=ids).exists()
-             for ids in data["ids"]]):
-            [user.answers_user.get(id=ids).delete() for ids in data["ids"]]
+        data = request.get_full_path().split('?')[1]
+        data = [int(i.replace('ids%5B%5D=', ''))
+                for i in data.split('&')]
+        '''
+        if user.answers_user.filter(id=data[0]).exists():
+            user.answers_user.get(id=data[0]).delete()
+        if user.relay_to_user.filter(id=data[0]).exists():
+            user.relay_to_user.get(id=data[0]).delete()
+        '''
+        if friendmod.objects.filter(id=data[0]).exists():
+            friendmod.objects.filter(id=data[0]).delete()
             result = {'status': '0'}
+
     return JsonResponse(result)
