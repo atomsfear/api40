@@ -1,0 +1,4 @@
+Django==2.2.15
+django-sslserver==0.22
+pytz==2020.1
+sqlparse==0.3.1
