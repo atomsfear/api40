@@ -38,7 +38,6 @@ INSTALLED_APPS = [
     'diabetes',
     'werkzeug_debugger_runserver',
     'django_extensions',
-    'letsencrypt',
 ]
 
 MIDDLEWARE = [
