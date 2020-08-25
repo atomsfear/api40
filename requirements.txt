@@ -4,6 +4,7 @@ cffi==1.14.2
 cryptography==3.0
 Django==2.2.15
 django-extensions==3.0.5
+django-letsencrypt==3.0.1
 django-werkzeug-debugger-runserver==0.3.1
 isort==4.3.21
 lazy-object-proxy==1.4.3
