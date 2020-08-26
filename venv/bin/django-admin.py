@@ -1,4 +1,4 @@
-#!/home/user/api40ssl/venv/bin/python3
+#!/home/user/api40/venv/bin/python3
 from django.core import management
 
 if __name__ == "__main__":
