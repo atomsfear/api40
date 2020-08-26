@@ -1,4 +1,4 @@
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from diabetes.models import Patient, EmailAuth, Default, Setting, Medical, Drug, A1cs, userblood, userweight, userbloodsugar, dietmod, care, notificationmod, friendmod, receivemod
 from diabetes.forms import RegisterForm, PersonalInfoForm, PersonalDefaultForm, SettingForm, MedicalForm, DrugForm, A1csForm, UbloodForm, UweightForm, UbloodsugarForm, DietForm, CareForm, NotificationForm, receiveForm
 from django.contrib import auth as Auth
@@ -22,6 +22,8 @@ def to_int(value):
 def to_float(value):
     return None if value is None else float(value)
 
+def acme(request, token):
+    return HttpResponse(token + '.ZQ_GB0GwfRweoEeEo3bP0w0CzkL5BHdW5xX6vs68R50', content_type="text/plain")
 
 def register(request):
     # 1.註冊

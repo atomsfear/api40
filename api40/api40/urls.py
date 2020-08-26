@@ -19,6 +19,7 @@ import diabetes.views as dv
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('.well-known/acme-challenge/<str:token>', dv.acme),
 
     ###########登入###########
     path('api/register/', dv.register),  # 1.註冊
